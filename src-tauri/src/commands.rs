@@ -197,14 +197,31 @@ pub fn cancel_search(state: State<AppState>, search_id: String) -> Result<(), St
     Ok(())
 }
 
-/// Fuzzy filename search under `root`; returns the best matches.
+/// Fuzzy filename search under `root`; returns the best matches. The file list
+/// is cached per root (and invalidated by the watcher) so rapid keystrokes
+/// don't re-walk the tree.
 #[tauri::command]
 pub fn search_files(
+    state: State<AppState>,
     query: String,
     root: String,
     limit: Option<usize>,
 ) -> Result<Vec<search_files_mod::FuzzyMatch>, String> {
-    Ok(search_files_mod::search_files(&query, &root, limit.unwrap_or(50)))
+    let index = {
+        let mut cache = state
+            .file_index
+            .lock()
+            .map_err(|e| format!("file index lock poisoned: {e}"))?;
+        match cache.get(&root) {
+            Some(index) => index.clone(),
+            None => {
+                let index = search_files_mod::build_index(&root);
+                cache.insert(root.clone(), index.clone());
+                index
+            }
+        }
+    };
+    Ok(search_files_mod::search_files(&index, &query, limit.unwrap_or(50)))
 }
 
 /// List discovered plugins and their contributions.

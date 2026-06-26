@@ -10,7 +10,7 @@ use notify_debouncer_full::new_debouncer;
 use notify_debouncer_full::notify::{EventKind, RecursiveMode};
 use notify_debouncer_full::DebounceEventResult;
 use serde::Serialize;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 /// Opaque handle that keeps the underlying debounced watcher alive. Dropping it
 /// (or replacing it in AppState) stops watching. Boxed as `Any` so callers need
@@ -45,6 +45,12 @@ pub fn watch_paths(app: &AppHandle, paths: &[String]) -> Result<ProjectWatcher, 
                 }
             }
             if !paths.is_empty() {
+                // Invalidate the fuzzy-search file index (files added/removed).
+                if let Some(state) = handle.try_state::<crate::state::AppState>() {
+                    if let Ok(mut cache) = state.file_index.lock() {
+                        cache.clear();
+                    }
+                }
                 let _ = handle.emit(
                     "fs-changed",
                     FsChanged {

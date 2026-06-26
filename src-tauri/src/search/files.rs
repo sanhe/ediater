@@ -3,6 +3,7 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 
 use ignore::WalkBuilder;
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
@@ -10,6 +11,9 @@ use nucleo_matcher::{Config, Matcher};
 use serde::Serialize;
 
 const MAX_WALK: usize = 200_000;
+
+/// A cached, shareable list of (absolute, root-relative) file paths for a root.
+pub type FileIndex = Arc<Vec<(String, String)>>;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -47,19 +51,26 @@ fn collect_files(root: &str) -> Vec<(String, String)> {
     out
 }
 
-pub fn search_files(query: &str, root: &str, limit: usize) -> Vec<FuzzyMatch> {
-    let files = collect_files(root);
+/// Build a fresh file index for a root (a full gitignore-aware walk).
+pub fn build_index(root: &str) -> FileIndex {
+    Arc::new(collect_files(root))
+}
 
+pub fn search_files(index: &FileIndex, query: &str, limit: usize) -> Vec<FuzzyMatch> {
     if query.trim().is_empty() {
-        return files
-            .into_iter()
+        return index
+            .iter()
             .take(limit)
-            .map(|(path, rel)| FuzzyMatch { path, rel, score: 0 })
+            .map(|(abs, rel)| FuzzyMatch {
+                path: abs.clone(),
+                rel: rel.clone(),
+                score: 0,
+            })
             .collect();
     }
 
     // Map rel -> abs so we can recover absolute paths from match results.
-    let abs_by_rel: HashMap<&str, &str> = files
+    let abs_by_rel: HashMap<&str, &str> = index
         .iter()
         .map(|(abs, rel)| (rel.as_str(), abs.as_str()))
         .collect();
@@ -67,7 +78,7 @@ pub fn search_files(query: &str, root: &str, limit: usize) -> Vec<FuzzyMatch> {
     let mut matcher = Matcher::new(Config::DEFAULT.match_paths());
     let pattern = Pattern::parse(query, CaseMatching::Smart, Normalization::Smart);
     let mut matches =
-        pattern.match_list(files.iter().map(|(_, rel)| rel.as_str()), &mut matcher);
+        pattern.match_list(index.iter().map(|(_, rel)| rel.as_str()), &mut matcher);
     matches.truncate(limit);
 
     matches
