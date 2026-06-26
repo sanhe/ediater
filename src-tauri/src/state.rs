@@ -1,7 +1,8 @@
 //! Shared application state managed by Tauri and accessed from commands.
 
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, Mutex};
 
 use crate::fs::watch::ProjectWatcher;
 use crate::pty::session::PtySession;
@@ -13,6 +14,8 @@ pub struct AppState {
     pub watcher: Mutex<Option<ProjectWatcher>>,
     /// Live terminal sessions, keyed by pty id.
     pub ptys: Mutex<HashMap<String, PtySession>>,
+    /// Cancel flags for in-flight text searches, keyed by search id.
+    pub searches: Mutex<HashMap<String, Arc<AtomicBool>>>,
     /// Serializes action-log appends so concurrent batches never interleave.
     pub log_lock: Mutex<()>,
 }

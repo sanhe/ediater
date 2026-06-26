@@ -2,6 +2,7 @@ mod action_log;
 mod commands;
 mod fs;
 mod pty;
+mod search;
 mod session;
 mod state;
 
@@ -31,6 +32,9 @@ pub fn run() {
             commands::pty_write,
             commands::pty_resize,
             commands::pty_kill,
+            commands::search_text,
+            commands::cancel_search,
+            commands::search_files,
             commands::append_action_log,
         ])
         .run(tauri::generate_context!())

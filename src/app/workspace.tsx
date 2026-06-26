@@ -12,8 +12,8 @@ export interface WorkspaceContextValue {
   dispatch: Dispatch<SessionAction>;
   /** Open the folder picker and load the chosen folder as the project. */
   openFolder: () => Promise<void>;
-  /** Open a file in the editor (wired in the editor milestone). */
-  openFile: (path: string) => void;
+  /** Open a file in the editor, optionally revealing a 1-based line. */
+  openFile: (path: string, line?: number) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);

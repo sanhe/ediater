@@ -4,6 +4,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { resolveLanguage } from "./cm/languages";
+import { onReveal } from "./reveal";
 import type { ThemeKind } from "../../app/theme/themes";
 
 interface CodeMirrorViewProps {
@@ -125,6 +126,25 @@ export function CodeMirrorView({
       effects: themeCompartment.current.reconfigure(syntaxFor(kind)),
     });
   }, [kind]);
+
+  // Reveal a line on request (e.g. clicking a search result).
+  useEffect(() => {
+    return onReveal(path, ({ line, column }) => {
+      const view = viewRef.current;
+      if (!view) return;
+      const lineNo = Math.max(1, Math.min(line, view.state.doc.lines));
+      const lineInfo = view.state.doc.line(lineNo);
+      const pos =
+        column != null
+          ? Math.min(lineInfo.from + column, lineInfo.to)
+          : lineInfo.from;
+      view.dispatch({
+        selection: { anchor: pos },
+        effects: EditorView.scrollIntoView(pos, { y: "center" }),
+      });
+      view.focus();
+    });
+  }, [path]);
 
   return <div className="cm-host" ref={hostRef} />;
 }

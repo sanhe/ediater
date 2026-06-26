@@ -20,6 +20,7 @@ import { WorkspaceProvider, type WorkspaceContextValue } from "./workspace";
 import { ThemeController } from "./theme/ThemeContext";
 import { ThemeWorkshopProvider } from "./theme/ThemeWorkshop";
 import { DocumentsProvider } from "../panels/editor/documents";
+import { requestReveal } from "../panels/editor/reveal";
 import { CommandsLayer } from "../commands/CommandsLayer";
 import { AppShell } from "../components/AppShell";
 
@@ -149,8 +150,9 @@ export function App() {
   }, [loggedDispatch]);
 
   const openFile = useCallback(
-    (path: string) => {
+    (path: string, line?: number) => {
       loggedDispatch({ type: "openFileTab", path });
+      if (line != null) requestReveal(path, line);
     },
     [loggedDispatch],
   );

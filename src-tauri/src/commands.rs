@@ -1,15 +1,19 @@
 //! Tauri command surface (frontend → Rust). Thin wrappers that delegate to the
 //! respective service modules.
 
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
 use serde_json::Value;
 use tauri::ipc::Channel;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 
 use crate::action_log;
 use crate::fs::io::{self, FileContent};
 use crate::fs::listing::{self, FileEntry};
 use crate::fs::watch;
 use crate::pty::session as pty;
+use crate::search::{files as search_files_mod, text as search_text_mod};
 use crate::session;
 use crate::state::AppState;
 
@@ -129,6 +133,68 @@ pub fn pty_kill(state: State<AppState>, id: String) -> Result<(), String> {
         session.kill();
     }
     Ok(())
+}
+
+/// Start a streaming project-wide text search. Matches arrive on `on_event`;
+/// returns immediately while the search runs on a worker thread.
+#[tauri::command]
+pub fn search_text(
+    app: AppHandle,
+    state: State<AppState>,
+    search_id: String,
+    query: String,
+    root: String,
+    options: search_text_mod::SearchOptions,
+    on_event: Channel<search_text_mod::SearchEvent>,
+) -> Result<(), String> {
+    let cancel = Arc::new(AtomicBool::new(false));
+    {
+        let mut map = state
+            .searches
+            .lock()
+            .map_err(|e| format!("search lock poisoned: {e}"))?;
+        // Single-flight: cancel any in-flight searches — the UI only wants the
+        // latest. With the in-file cancel check, the old threads stop promptly.
+        for flag in map.values() {
+            flag.store(true, Ordering::Relaxed);
+        }
+        map.insert(search_id.clone(), cancel.clone());
+    }
+
+    let app_handle = app.clone();
+    std::thread::spawn(move || {
+        search_text_mod::run(query, root, options, cancel, on_event);
+        if let Some(st) = app_handle.try_state::<AppState>() {
+            if let Ok(mut map) = st.searches.lock() {
+                map.remove(&search_id);
+            }
+        }
+    });
+    Ok(())
+}
+
+/// Cancel an in-flight text search by id.
+#[tauri::command]
+pub fn cancel_search(state: State<AppState>, search_id: String) -> Result<(), String> {
+    if let Some(flag) = state
+        .searches
+        .lock()
+        .map_err(|e| format!("search lock poisoned: {e}"))?
+        .get(&search_id)
+    {
+        flag.store(true, Ordering::Relaxed);
+    }
+    Ok(())
+}
+
+/// Fuzzy filename search under `root`; returns the best matches.
+#[tauri::command]
+pub fn search_files(
+    query: String,
+    root: String,
+    limit: Option<usize>,
+) -> Result<Vec<search_files_mod::FuzzyMatch>, String> {
+    Ok(search_files_mod::search_files(&query, &root, limit.unwrap_or(50)))
 }
 
 /// Append a batch of pre-serialized JSONL action-log lines to durable storage.

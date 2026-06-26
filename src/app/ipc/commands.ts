@@ -133,6 +133,50 @@ export function ptyKill(id: string): Promise<void> {
   return invoke<void>("pty_kill", { id });
 }
 
+export interface SearchOptions {
+  caseSensitive?: boolean;
+  regex?: boolean;
+}
+
+export type SearchEvent =
+  | { kind: "match"; file: string; line: number; column: number; text: string }
+  | { kind: "done"; matched: number; truncated: boolean; cancelled: boolean }
+  | { kind: "error"; message: string };
+
+/**
+ * Start a streaming text search. Matches arrive on `onEvent`. Search/fuzzy
+ * calls use raw invoke (no io-span logging) since they fire per keystroke.
+ */
+export function searchText(
+  searchId: string,
+  query: string,
+  root: string,
+  options: SearchOptions,
+  onEvent: Channel<SearchEvent>,
+): Promise<void> {
+  return invoke<void>("search_text", { searchId, query, root, options, onEvent });
+}
+
+/** Cancel an in-flight text search. */
+export function cancelSearch(searchId: string): Promise<void> {
+  return invoke<void>("cancel_search", { searchId });
+}
+
+export interface FuzzyMatch {
+  path: string;
+  rel: string;
+  score: number;
+}
+
+/** Fuzzy filename search under a root folder. */
+export function searchFiles(
+  query: string,
+  root: string,
+  limit?: number,
+): Promise<FuzzyMatch[]> {
+  return invoke<FuzzyMatch[]>("search_files", { query, root, limit });
+}
+
 /** Open the native folder picker; returns the chosen path or null. */
 export async function pickFolder(): Promise<string | null> {
   const result = await openDialog({ directory: true, multiple: false });
