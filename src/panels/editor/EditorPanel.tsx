@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import type { PanelBodyProps } from "../../layout/panelRegistry";
-import { useWorkspace } from "../../app/workspace";
+import { useResolvedTheme } from "../../app/theme/ThemeContext";
 import { useDocuments } from "./documents";
 import { CodeMirrorView } from "./CodeMirrorView";
 import "./editor.css";
@@ -10,10 +10,9 @@ import "./editor.css";
  * the tabs). The buffer lives in the global documents store, keyed by path.
  */
 export function EditorPanel({ panel }: PanelBodyProps) {
-  const { session } = useWorkspace();
+  const { kind } = useResolvedTheme();
   const docs = useDocuments();
   const path = panel.kind === "editor" ? panel.path : null;
-  const theme = session.ui.theme;
 
   useEffect(() => {
     if (path) docs.ensureOpen(path);
@@ -35,7 +34,7 @@ export function EditorPanel({ panel }: PanelBodyProps) {
             path={path}
             initialContent={doc.content}
             readonly={doc.readonly}
-            theme={theme}
+            kind={kind}
             onChange={(content) => docs.update(path, content)}
             onSave={() => void docs.save(path)}
           />

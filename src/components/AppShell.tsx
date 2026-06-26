@@ -1,5 +1,8 @@
 import { useWorkspace } from "../app/workspace";
 import { useDocuments } from "../panels/editor/documents";
+import { SYSTEM_THEME } from "../app/theme/themes";
+import { useAllThemes } from "../app/theme/ThemeContext";
+import { useThemeWorkshop } from "../app/theme/ThemeWorkshop";
 import { DockLayout } from "../layout/DockLayout";
 import { findGroupById } from "../layout/layout";
 import { panelTitle, type PanelState } from "../layout/panel";
@@ -14,8 +17,11 @@ interface AppShellProps {
 export function AppShell({ backendStatus }: AppShellProps) {
   const { session, dispatch, openFolder } = useWorkspace();
   const docs = useDocuments();
-  const { theme } = session.ui;
+  const themes = useAllThemes();
+  const { openEditor } = useThemeWorkshop();
   const hasWorkspace = session.layout != null;
+  const builtinThemes = themes.filter((t) => t.builtin);
+  const customThemes = themes.filter((t) => !t.builtin);
 
   const activeGroup =
     session.ui.activeGroupId && session.layout
@@ -61,16 +67,39 @@ export function AppShell({ backendStatus }: AppShellProps) {
               </button>
             </>
           )}
-          <button
-            className="btn"
-            onClick={() =>
-              dispatch({
-                type: "setTheme",
-                theme: theme === "dark" ? "light" : "dark",
-              })
+          <select
+            className="theme-select"
+            title="Color theme"
+            aria-label="Color theme"
+            value={session.ui.theme}
+            onChange={(e) =>
+              dispatch({ type: "setTheme", theme: e.target.value })
             }
           >
-            {theme === "dark" ? "Light mode" : "Dark mode"}
+            <option value={SYSTEM_THEME}>System</option>
+            <optgroup label="Built-in">
+              {builtinThemes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </optgroup>
+            {customThemes.length > 0 && (
+              <optgroup label="Custom">
+                {customThemes.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+          <button
+            className="btn"
+            title="Create or edit a color theme"
+            onClick={() => openEditor()}
+          >
+            Customize…
           </button>
         </div>
       </header>

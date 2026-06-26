@@ -1,4 +1,5 @@
-import type { SessionData, ThemeMode } from "./sessionData";
+import type { SessionData } from "./sessionData";
+import { SYSTEM_THEME, type Theme, type ThemePreference } from "../theme/themes";
 import {
   addPanelToGroup,
   findGroupById,
@@ -22,7 +23,10 @@ import type { PanelKind, PanelState } from "../../layout/panel";
  */
 export type SessionAction =
   | { type: "hydrate"; session: SessionData }
-  | { type: "setTheme"; theme: ThemeMode }
+  | { type: "setTheme"; theme: ThemePreference }
+  | { type: "upsertCustomTheme"; theme: Theme }
+  | { type: "addImportedThemes"; themes: Theme[] }
+  | { type: "removeCustomTheme"; id: string }
   | { type: "openFolderTab"; root: string }
   | { type: "openFileTab"; path: string }
   | { type: "closePanel"; panelId: string }
@@ -154,6 +158,37 @@ export function sessionReducer(
 
     case "setTheme":
       return { ...state, ui: { ...state.ui, theme: action.theme } };
+
+    case "upsertCustomTheme": {
+      const exists = state.ui.customThemes.some(
+        (t) => t.id === action.theme.id,
+      );
+      const customThemes = exists
+        ? state.ui.customThemes.map((t) =>
+            t.id === action.theme.id ? action.theme : t,
+          )
+        : [...state.ui.customThemes, action.theme];
+      return { ...state, ui: { ...state.ui, customThemes } };
+    }
+
+    case "addImportedThemes":
+      if (action.themes.length === 0) return state;
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          customThemes: [...state.ui.customThemes, ...action.themes],
+        },
+      };
+
+    case "removeCustomTheme": {
+      const customThemes = state.ui.customThemes.filter(
+        (t) => t.id !== action.id,
+      );
+      // If the deleted theme was active, fall back to following the system.
+      const theme = state.ui.theme === action.id ? SYSTEM_THEME : state.ui.theme;
+      return { ...state, ui: { ...state.ui, customThemes, theme } };
+    }
 
     case "openFolderTab": {
       const existing = panelsOf(state).find(

@@ -9,7 +9,16 @@
   --statusbar-height: 22px;
 }
 
-:root[data-theme="dark"] {
+/*
+ * Theme palettes are data-driven: ThemeController (src/app/theme) writes the
+ * active theme's colours as inline custom properties on <html>, plus `data-theme`
+ * and `color-scheme`. That is what lets users author and import themes at runtime.
+ *
+ * This block is the pre-mount fallback only — the bundled "dark" palette, so the
+ * first paint (index.html ships `data-theme="dark"`) isn't unstyled before React
+ * mounts and applies the real theme. Keep it in sync with the `dark` built-in.
+ */
+:root {
   --bg: #1e1e1e;
   --bg-elevated: #252526;
   --bg-panel: #1e1e1e;
@@ -22,21 +31,13 @@
   --titlebar-bg: #323233;
   --statusbar-bg: #2f7dd1;
   --statusbar-fg: #ffffff;
-}
 
-:root[data-theme="light"] {
-  --bg: #ffffff;
-  --bg-elevated: #f3f3f3;
-  --bg-panel: #ffffff;
-  --border: #e0e0e0;
-  --fg: #1f1f1f;
-  --fg-muted: #6e6e6e;
-  --accent: #2f7dd1;
-  --accent-soft: rgba(47, 125, 209, 0.14);
-  --accent-fg: #ffffff;
-  --titlebar-bg: #dddddd;
-  --statusbar-bg: #2f7dd1;
-  --statusbar-fg: #ffffff;
+  --editor-bg: #1e1e1e;
+  --editor-fg: #d4d4d4;
+  --editor-gutter-fg: #6e7681;
+  --editor-active-line: rgba(255, 255, 255, 0.04);
+  --editor-selection: rgba(47, 125, 209, 0.3);
+  --editor-cursor: #d4d4d4;
 }
 
 * {
@@ -156,4 +157,24 @@ body {
 
 .btn:active {
   background: var(--accent-soft);
+}
+
+.theme-select {
+  font: inherit;
+  font-size: 12px;
+  color: var(--fg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px 6px;
+  cursor: pointer;
+}
+
+.theme-select:hover {
+  border-color: var(--accent);
+}
+
+.theme-select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
 }

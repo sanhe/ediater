@@ -9,15 +9,22 @@
 
 import type { LayoutNode } from "../../layout/layout";
 import type { PanelState } from "../../layout/panel";
+import {
+  sanitizeCustomThemes,
+  SYSTEM_THEME,
+  type Theme,
+  type ThemePreference,
+} from "../theme/themes";
 
 export const SESSION_SCHEMA_VERSION = 3;
-
-export type ThemeMode = "light" | "dark";
 
 export interface SessionData {
   version: number;
   ui: {
-    theme: ThemeMode;
+    /** A theme id, or "system" to follow the OS colour scheme. */
+    theme: ThemePreference;
+    /** User-authored / imported themes, selectable alongside the built-ins. */
+    customThemes: Theme[];
     /** The focused group (where new files/folders open as tabs). */
     activeGroupId: string | null;
   };
@@ -30,7 +37,7 @@ export interface SessionData {
 export function defaultSession(): SessionData {
   return {
     version: SESSION_SCHEMA_VERSION,
-    ui: { theme: "dark", activeGroupId: null },
+    ui: { theme: SYSTEM_THEME, customThemes: [], activeGroupId: null },
     layout: null,
     panels: {},
   };
@@ -46,28 +53,28 @@ export function migrateSession(raw: unknown): SessionData {
   if (!raw || typeof raw !== "object") return base;
 
   const data = raw as Record<string, unknown>;
-  const ui = data.ui as { theme?: unknown } | undefined;
+  const ui = data.ui as
+    | { theme?: unknown; customThemes?: unknown; activeGroupId?: unknown }
+    | undefined;
+  // Any non-empty string is kept; resolveTheme falls back gracefully for ids
+  // that no longer exist, so a removed custom theme can't strand the app.
   const theme =
-    ui?.theme === "light" || ui?.theme === "dark" ? ui.theme : base.ui.theme;
+    typeof ui?.theme === "string" && ui.theme ? ui.theme : base.ui.theme;
+  const customThemes = sanitizeCustomThemes(ui?.customThemes);
 
   if (data.version === SESSION_SCHEMA_VERSION) {
-    const persistedUi = data.ui as
-      | { activeGroupId?: unknown }
-      | undefined;
     const activeGroupId =
-      typeof persistedUi?.activeGroupId === "string"
-        ? persistedUi.activeGroupId
-        : null;
+      typeof ui?.activeGroupId === "string" ? ui.activeGroupId : null;
     const layout = (data.layout as LayoutNode | null | undefined) ?? null;
     const panels =
       (data.panels as Record<string, PanelState> | undefined) ?? {};
     return {
       version: SESSION_SCHEMA_VERSION,
-      ui: { theme, activeGroupId },
+      ui: { theme, customThemes, activeGroupId },
       layout,
       panels,
     };
   }
 
-  return { ...base, ui: { ...base.ui, theme } };
+  return { ...base, ui: { ...base.ui, theme, customThemes } };
 }

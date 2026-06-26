@@ -1,0 +1,269 @@
+.te-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2500;
+}
+
+.te-dialog {
+  width: 780px;
+  max-width: 94vw;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.te-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.te-title {
+  font-weight: 600;
+}
+
+.te-body {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.te-form {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.te-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.te-meta-label {
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+.te-text {
+  font: inherit;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+  outline: none;
+}
+
+.te-text:focus {
+  border-color: var(--accent);
+}
+
+.te-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px 12px;
+  margin: 0;
+}
+
+.te-group legend {
+  font-size: 11px;
+  color: var(--fg-muted);
+  padding: 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.te-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.te-row-label {
+  flex: 0 0 130px;
+  font-size: 12px;
+}
+
+.te-swatch {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.te-swatch-static {
+  cursor: default;
+}
+
+.te-row-value {
+  flex: 1 1 0;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* --- live preview --- */
+.te-preview {
+  flex: 0 0 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: sticky;
+  top: 0;
+}
+
+.te-preview-caption {
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+.te-preview-app {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 220px;
+  font-size: 12px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.te-pv-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--titlebar-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.te-pv-title {
+  font-weight: 600;
+}
+
+.te-pv-chip {
+  font-size: 11px;
+  color: var(--accent-fg);
+  background: var(--accent);
+  border-radius: 10px;
+  padding: 1px 8px;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.te-pv-main {
+  flex: 1 1 0;
+  display: flex;
+  background: var(--editor-bg);
+  color: var(--editor-fg);
+  font-family: var(--font-mono);
+  min-height: 0;
+}
+
+.te-pv-gutter {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  color: var(--editor-gutter-fg);
+  text-align: right;
+}
+
+.te-pv-editor {
+  flex: 1 1 0;
+  padding: 6px 8px;
+  min-width: 0;
+}
+
+.te-pv-line {
+  padding: 1px 4px;
+  border-radius: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.te-pv-active {
+  background: var(--editor-active-line);
+  border-left: 2px solid var(--editor-cursor);
+}
+
+.te-pv-muted {
+  color: var(--fg-muted);
+}
+
+.te-pv-accent {
+  color: var(--accent);
+}
+
+.te-pv-sel {
+  background: var(--editor-selection);
+  border-radius: 2px;
+}
+
+.te-pv-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  background: var(--statusbar-bg);
+  color: var(--statusbar-fg);
+  font-size: 11px;
+}
+
+.te-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.te-save {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.te-save:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* --- transient result toast --- */
+.theme-toast {
+  position: fixed;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3000;
+  padding: 8px 16px;
+  background: var(--bg-elevated);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  font-size: 12px;
+  max-width: 70vw;
+  pointer-events: none;
+}

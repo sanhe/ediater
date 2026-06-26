@@ -4,16 +4,46 @@ import { EditorView, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { resolveLanguage } from "./cm/languages";
-import type { ThemeMode } from "../../app/session/sessionData";
+import type { ThemeKind } from "../../app/theme/themes";
 
 interface CodeMirrorViewProps {
   path: string;
   initialContent: string;
   readonly: boolean;
-  theme: ThemeMode;
+  /** Base appearance of the active theme; selects the syntax palette. */
+  kind: ThemeKind;
   onChange: (content: string) => void;
   onSave: () => void;
 }
+
+/**
+ * Editor chrome (background, gutters, selection, cursor) driven by the active
+ * theme's CSS variables, so every theme — not just the canonical dark/light —
+ * gets a matching editor. Syntax token colours come from the kind-specific
+ * highlight palette layered underneath (`oneDark` for dark, CM's default for
+ * light), reconfigured live via the theme compartment.
+ */
+const editorChrome = EditorView.theme({
+  "&": {
+    height: "100%",
+    backgroundColor: "var(--editor-bg)",
+    color: "var(--editor-fg)",
+  },
+  ".cm-scroller": { overflow: "auto" },
+  ".cm-gutters": {
+    backgroundColor: "var(--editor-bg)",
+    color: "var(--editor-gutter-fg)",
+    border: "none",
+  },
+  ".cm-activeLine": { backgroundColor: "var(--editor-active-line)" },
+  ".cm-activeLineGutter": { backgroundColor: "var(--editor-active-line)" },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--editor-cursor)" },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
+    backgroundColor: "var(--editor-selection)",
+  },
+});
+
+const syntaxFor = (kind: ThemeKind) => (kind === "dark" ? oneDark : []);
 
 /**
  * A single CodeMirror 6 editor instance bound to one file. The parent keys this
@@ -24,7 +54,7 @@ export function CodeMirrorView({
   path,
   initialContent,
   readonly,
-  theme,
+  kind,
   onChange,
   onSave,
 }: CodeMirrorViewProps) {
@@ -47,7 +77,7 @@ export function CodeMirrorView({
       doc: initialContent,
       extensions: [
         basicSetup,
-        themeCompartment.current.of(theme === "dark" ? oneDark : []),
+        themeCompartment.current.of(syntaxFor(kind)),
         languageCompartment.current.of([]),
         EditorState.readOnly.of(readonly),
         Prec.highest(
@@ -65,10 +95,8 @@ export function CodeMirrorView({
         EditorView.updateListener.of((u) => {
           if (u.docChanged) onChangeRef.current(u.state.doc.toString());
         }),
-        EditorView.theme({
-          "&": { height: "100%" },
-          ".cm-scroller": { overflow: "auto" },
-        }),
+        // Chrome last so it overrides the syntax palette's editor styling.
+        editorChrome,
       ],
     });
 
@@ -94,11 +122,9 @@ export function CodeMirrorView({
 
   useEffect(() => {
     viewRef.current?.dispatch({
-      effects: themeCompartment.current.reconfigure(
-        theme === "dark" ? oneDark : [],
-      ),
+      effects: themeCompartment.current.reconfigure(syntaxFor(kind)),
     });
-  }, [theme]);
+  }, [kind]);
 
   return <div className="cm-host" ref={hostRef} />;
 }
