@@ -1,0 +1,87 @@
+.editor-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.editor-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  height: 30px;
+  overflow-x: auto;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+.editor-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+
+.editor-tab.active {
+  background: var(--bg-panel);
+  color: var(--fg);
+}
+
+.editor-tab:hover {
+  color: var(--fg);
+}
+
+.editor-tab-dirty {
+  color: var(--accent);
+  font-size: 10px;
+}
+
+.editor-tab-close {
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: 3px;
+}
+
+.editor-tab-close:hover {
+  background: var(--border);
+}
+
+.editor-body {
+  flex: 1 1 0;
+  min-height: 0;
+  position: relative;
+}
+
+.editor-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.editor-error {
+  color: #e06c75;
+  padding: 12px;
+  text-align: center;
+}
+
+.cm-host {
+  position: absolute;
+  inset: 0;
+}
+
+.cm-host .cm-editor {
+  height: 100%;
+}
+
+.cm-host .cm-editor.cm-focused {
+  outline: none;
+}

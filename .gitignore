@@ -1,0 +1,17 @@
+node_modules
+dist
+dist-ssr
+*.local
+
+# Rust / Tauri
+/src-tauri/target
+/src-tauri/gen/schemas
+
+# generated icon source
+/app-icon.png
+
+# editor / OS
+.DS_Store
+*.log
+.vscode/*
+!.vscode/extensions.json

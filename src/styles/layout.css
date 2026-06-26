@@ -1,0 +1,166 @@
+.layout-root {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+.layout-split {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+.layout-split.row {
+  flex-direction: row;
+}
+
+.layout-split.column {
+  flex-direction: column;
+}
+
+.layout-slot {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.layout-resize-handle {
+  flex: 0 0 6px;
+  position: relative;
+  z-index: 2;
+  background: transparent;
+}
+
+.layout-split.row > .layout-resize-handle {
+  cursor: ew-resize;
+}
+
+.layout-split.column > .layout-resize-handle {
+  cursor: ns-resize;
+}
+
+.layout-resize-handle:hover {
+  background: var(--accent-soft);
+}
+
+body.layout-resizing {
+  user-select: none;
+}
+
+body.layout-dragging {
+  user-select: none;
+  cursor: grabbing;
+}
+
+/* --- dock group (tab strip + body) --- */
+.dock-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.dock-group.active {
+  border-color: var(--accent);
+}
+
+.dock-tabbar {
+  display: flex;
+  flex: 0 0 auto;
+  height: 30px;
+  overflow-x: auto;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+.dock-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--fg-muted);
+  user-select: none;
+  max-width: 220px;
+}
+
+.dock-tab.active {
+  background: var(--bg-panel);
+  color: var(--fg);
+}
+
+.dock-tab:hover {
+  color: var(--fg);
+}
+
+.dock-tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-tab-dirty {
+  color: var(--accent);
+  font-size: 10px;
+}
+
+.dock-tab-close {
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: 3px;
+}
+
+.dock-tab-close:hover {
+  background: var(--border);
+}
+
+.dock-group-body {
+  flex: 1 1 0;
+  min-height: 0;
+  position: relative;
+  overflow: auto;
+}
+
+.panel-placeholder {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.panel-placeholder-hint {
+  font-size: 11px;
+}
+
+/* --- drag drop indicator --- */
+.drop-indicator {
+  background: var(--accent-soft);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  pointer-events: none;
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+.drop-indicator-tab {
+  background: var(--accent-soft);
+  border-style: dashed;
+}

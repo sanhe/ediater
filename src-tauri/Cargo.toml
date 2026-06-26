@@ -1,0 +1,30 @@
+[package]
+name = "ediater"
+version = "0.0.0"
+description = "A lightweight, cross-platform IDE"
+authors = ["ediater"]
+edition = "2021"
+rust-version = "1.77.2"
+
+# The library half is what Tauri runs; main.rs is a thin launcher. This layout
+# also keeps the door open for sharing the backend with mobile targets later.
+[lib]
+name = "ediater_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+notify-debouncer-full = "0.5"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
