@@ -17,12 +17,14 @@ use serde_json::{json, Value};
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(15);
 
 type Pending = Arc<Mutex<HashMap<u64, Sender<Result<Value, String>>>>>;
+type NotifHandler = Arc<Mutex<Option<Box<dyn Fn(Value) + Send>>>>;
 
 pub struct Connection {
     child: Child,
     stdin: Arc<Mutex<ChildStdin>>,
     next_id: AtomicU64,
     pending: Pending,
+    notif: NotifHandler,
 }
 
 fn write_message(stdin: &mut ChildStdin, value: &Value) -> Result<(), String> {
@@ -78,10 +80,13 @@ impl Connection {
         let stderr = child.stderr.take().ok_or("no stderr")?;
 
         let pending: Pending = Arc::new(Mutex::new(HashMap::new()));
+        let notif: NotifHandler = Arc::new(Mutex::new(None));
 
-        // Reader: route responses to their pending request by id.
+        // Reader: route responses to their pending request by id; forward
+        // notifications (no id) to the registered handler (e.g. AI streaming).
         {
             let pending = pending.clone();
+            let notif = notif.clone();
             thread::spawn(move || {
                 let mut reader = BufReader::new(stdout);
                 loop {
@@ -103,8 +108,13 @@ impl Connection {
                                 {
                                     let _ = tx.send(result);
                                 }
+                            } else if id.is_none() && value.get("method").is_some() {
+                                if let Ok(guard) = notif.lock() {
+                                    if let Some(handler) = guard.as_ref() {
+                                        handler(value);
+                                    }
+                                }
                             }
-                            // Notifications / plugin→host requests: ignored in v1.
                         }
                         Ok(None) | Err(_) => break,
                     }
@@ -123,7 +133,15 @@ impl Connection {
             stdin: Arc::new(Mutex::new(stdin)),
             next_id: AtomicU64::new(1),
             pending,
+            notif,
         })
+    }
+
+    /// Register a handler for plugin→host notifications (e.g. AI stream events).
+    pub fn set_notification_handler(&self, handler: Box<dyn Fn(Value) + Send>) {
+        if let Ok(mut guard) = self.notif.lock() {
+            *guard = Some(handler);
+        }
     }
 
     pub fn request(&self, method: &str, params: Value) -> Result<Value, String> {

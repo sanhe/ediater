@@ -39,6 +39,8 @@ pub fn run() {
             commands::plugins_list,
             commands::plugins_reload,
             commands::format_document,
+            commands::ai_action,
+            commands::ai_cancel,
             commands::append_action_log,
         ])
         .run(tauri::generate_context!())

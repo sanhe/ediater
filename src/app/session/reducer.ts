@@ -83,6 +83,8 @@ function makePanel(kind: PanelKind, key?: string): PanelState {
       return { id, kind };
     case "search":
       return { id, kind };
+    case "ai":
+      return { id, kind };
   }
 }
 
@@ -264,8 +266,10 @@ export function sessionReducer(
 
       const panel = makePanel(action.kind);
       if (action.kind === "terminal") {
-        const anchor = editorTargetGroup(state);
-        return placePanelSplit(state, panel, anchor, "bottom");
+        return placePanelSplit(state, panel, editorTargetGroup(state), "bottom");
+      }
+      if (action.kind === "ai") {
+        return placePanelSplit(state, panel, editorTargetGroup(state), "right");
       }
       // search
       const anchor = groupOfFirstKind(state, "explorer");

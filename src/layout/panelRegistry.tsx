@@ -4,6 +4,7 @@ import { ExplorerPanel } from "../panels/explorer/ExplorerPanel";
 import { EditorPanel } from "../panels/editor/EditorPanel";
 import { TerminalPanel } from "../panels/terminal/TerminalPanel";
 import { SearchPanel } from "../panels/search/SearchPanel";
+import { AiPanel } from "../panels/ai/AiPanel";
 
 /** Props passed to every panel body component. */
 export interface PanelBodyProps {
@@ -16,4 +17,5 @@ export const panelRegistry: Record<PanelKind, ComponentType<PanelBodyProps>> = {
   editor: EditorPanel,
   terminal: TerminalPanel,
   search: SearchPanel,
+  ai: AiPanel,
 };

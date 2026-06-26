@@ -5,22 +5,28 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
-use serde_json::json;
+use serde_json::{json, Value};
+use tauri::ipc::Channel;
 
 use super::connection::Connection;
-use super::manifest::{CommandContribution, Manifest, PROTOCOL_VERSION};
+use super::manifest::{AiAction, CommandContribution, Manifest, PROTOCOL_VERSION};
 
 pub struct DiscoveredPlugin {
     pub dir: PathBuf,
     pub manifest: Manifest,
 }
 
+/// requestId -> (frontend stream channel, plugin id serving it).
+type AiStreams = Arc<Mutex<HashMap<String, (Channel<Value>, String)>>>;
+
 #[derive(Default)]
 pub struct PluginHost {
     discovered: Vec<DiscoveredPlugin>,
     connections: HashMap<String, Connection>,
+    ai_streams: AiStreams,
     loaded: bool,
 }
 
@@ -33,6 +39,38 @@ pub struct PluginDescriptor {
     /// Language ids this plugin can format.
     pub formatters: Vec<String>,
     pub commands: Vec<CommandContribution>,
+    pub ai_actions: Vec<AiAction>,
+}
+
+/// Forward an `ai/stream` notification to the frontend channel for its request.
+fn route_ai_stream(streams: &AiStreams, value: Value) {
+    if value.get("method").and_then(|m| m.as_str()) != Some("ai/stream") {
+        return;
+    }
+    let params = match value.get("params") {
+        Some(p) => p.clone(),
+        None => return,
+    };
+    let request_id = match params.get("requestId").and_then(|v| v.as_str()) {
+        Some(s) => s.to_string(),
+        None => return,
+    };
+    let kind = params
+        .get("kind")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    if let Ok(map) = streams.lock() {
+        if let Some((channel, _)) = map.get(&request_id) {
+            let _ = channel.send(params);
+        }
+    }
+    if kind == "done" || kind == "error" {
+        if let Ok(mut map) = streams.lock() {
+            map.remove(&request_id);
+        }
+    }
 }
 
 impl PluginHost {
@@ -77,6 +115,7 @@ impl PluginHost {
                     .map(|f| f.language_id.clone())
                     .collect(),
                 commands: p.manifest.capabilities.commands.clone(),
+                ai_actions: p.manifest.capabilities.ai_actions.clone(),
             })
             .collect()
     }
@@ -106,7 +145,65 @@ impl PluginHost {
             }),
         )?;
         let _ = conn.notify("initialized", json!({}));
+
+        // Route this plugin's AI stream notifications to the frontend.
+        let streams = self.ai_streams.clone();
+        conn.set_notification_handler(Box::new(move |value| {
+            route_ai_stream(&streams, value);
+        }));
+
         self.connections.insert(plugin_id.to_string(), conn);
+        Ok(())
+    }
+
+    /// Start a streaming AI action; stream events arrive on `channel`.
+    pub fn ai_action(
+        &mut self,
+        action_id: &str,
+        request_id: &str,
+        prompt: &str,
+        context: Value,
+        channel: Channel<Value>,
+    ) -> Result<(), String> {
+        let plugin_id = self
+            .discovered
+            .iter()
+            .find(|p| p.manifest.provides_ai_action(action_id))
+            .map(|p| p.manifest.plugin.id.clone())
+            .ok_or_else(|| format!("no plugin provides ai action '{action_id}'"))?;
+
+        self.ensure_connection(&plugin_id)?;
+        self.ai_streams
+            .lock()
+            .map_err(|_| "ai streams lock poisoned".to_string())?
+            .insert(request_id.to_string(), (channel, plugin_id.clone()));
+
+        self.connections
+            .get(&plugin_id)
+            .expect("connection just ensured")
+            .notify(
+                "ai/action",
+                json!({
+                    "actionId": action_id,
+                    "requestId": request_id,
+                    "prompt": prompt,
+                    "context": context,
+                }),
+            )
+    }
+
+    /// Cancel an in-flight AI action.
+    pub fn ai_cancel(&mut self, request_id: &str) -> Result<(), String> {
+        let entry = self
+            .ai_streams
+            .lock()
+            .map_err(|_| "ai streams lock poisoned".to_string())?
+            .remove(request_id);
+        if let Some((_, plugin_id)) = entry {
+            if let Some(conn) = self.connections.get(&plugin_id) {
+                let _ = conn.notify("ai/cancel", json!({ "requestId": request_id }));
+            }
+        }
         Ok(())
     }
 

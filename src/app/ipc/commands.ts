@@ -205,6 +205,34 @@ export function formatDocument(
   return invoke<string>("format_document", { path, content, languageId });
 }
 
+export type AiStreamEvent =
+  | { requestId: string; kind: "token"; delta: string }
+  | { requestId: string; kind: "status"; status: string }
+  | { requestId: string; kind: "done"; text?: string }
+  | { requestId: string; kind: "error"; message: string };
+
+/** Start a streaming AI action; events arrive on `onEvent`. */
+export function aiAction(
+  actionId: string,
+  requestId: string,
+  prompt: string,
+  context: unknown,
+  onEvent: Channel<AiStreamEvent>,
+): Promise<void> {
+  return invoke<void>("ai_action", {
+    actionId,
+    requestId,
+    prompt,
+    context,
+    onEvent,
+  });
+}
+
+/** Cancel an in-flight AI action. */
+export function aiCancel(requestId: string): Promise<void> {
+  return invoke<void>("ai_cancel", { requestId });
+}
+
 /** Open the native folder picker; returns the chosen path or null. */
 export async function pickFolder(): Promise<string | null> {
   const result = await openDialog({ directory: true, multiple: false });

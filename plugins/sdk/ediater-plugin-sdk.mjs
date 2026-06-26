@@ -12,6 +12,8 @@
 export function createPlugin() {
   const formatters = new Map(); // languageId -> (text, params) => string
   const commands = new Map(); // commandId -> (params) => any
+  const aiActions = new Map(); // actionId -> (ctx) => string | void
+  const cancelled = new Set(); // requestIds cancelled by the host
   let buffer = Buffer.alloc(0);
 
   function send(message) {
@@ -19,6 +21,7 @@ export function createPlugin() {
     process.stdout.write(`Content-Length: ${body.length}\r\n\r\n`);
     process.stdout.write(body);
   }
+  const notify = (method, params) => send({ jsonrpc: "2.0", method, params });
   const reply = (id, result) => send({ jsonrpc: "2.0", id, result });
   const replyError = (id, message) =>
     send({ jsonrpc: "2.0", id, error: { code: -32000, message } });
@@ -32,6 +35,7 @@ export function createPlugin() {
           capabilities: {
             formatting: [...formatters.keys()],
             commands: [...commands.keys()],
+            aiActions: [...aiActions.keys()],
           },
         });
         return;
@@ -70,6 +74,52 @@ export function createPlugin() {
         }
         return;
       }
+      case "ai/action": {
+        const { actionId, requestId, prompt, context } = params ?? {};
+        const handler = aiActions.get(actionId);
+        if (!handler) {
+          notify("ai/stream", {
+            requestId,
+            kind: "error",
+            message: `no ai action ${actionId}`,
+          });
+          return;
+        }
+        const ctx = {
+          prompt,
+          context,
+          requestId,
+          get cancelled() {
+            return cancelled.has(requestId);
+          },
+          token: (delta) => notify("ai/stream", { requestId, kind: "token", delta }),
+          status: (status) =>
+            notify("ai/stream", { requestId, kind: "status", status }),
+        };
+        Promise.resolve(handler(ctx))
+          .then((text) => {
+            if (!cancelled.has(requestId)) {
+              notify("ai/stream", {
+                requestId,
+                kind: "done",
+                text: typeof text === "string" ? text : undefined,
+              });
+            }
+            cancelled.delete(requestId);
+          })
+          .catch((e) => {
+            notify("ai/stream", {
+              requestId,
+              kind: "error",
+              message: String(e?.message ?? e),
+            });
+            cancelled.delete(requestId);
+          });
+        return; // notification — no reply
+      }
+      case "ai/cancel":
+        if (params?.requestId != null) cancelled.add(params.requestId);
+        return;
       default:
         if (id != null) replyError(id, `unknown method ${method}`);
     }
@@ -108,6 +158,10 @@ export function createPlugin() {
     },
     onCommand(commandId, handler) {
       commands.set(commandId, handler);
+      return this;
+    },
+    onAiAction(actionId, handler) {
+      aiActions.set(actionId, handler);
       return this;
     },
     start() {

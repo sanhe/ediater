@@ -256,6 +256,36 @@ pub fn format_document(
     host.format(&path, &language_id, &content)
 }
 
+/// Start a streaming AI action; stream events arrive on `on_event`.
+#[tauri::command]
+pub fn ai_action(
+    app: AppHandle,
+    state: State<AppState>,
+    action_id: String,
+    request_id: String,
+    prompt: String,
+    context: Value,
+    on_event: Channel<Value>,
+) -> Result<(), String> {
+    let dirs = plugin_dirs(&app);
+    let mut host = state
+        .plugin_host
+        .lock()
+        .map_err(|e| format!("plugin host lock poisoned: {e}"))?;
+    host.ensure_discovered(&dirs);
+    host.ai_action(&action_id, &request_id, &prompt, context, on_event)
+}
+
+/// Cancel an in-flight AI action.
+#[tauri::command]
+pub fn ai_cancel(state: State<AppState>, request_id: String) -> Result<(), String> {
+    state
+        .plugin_host
+        .lock()
+        .map_err(|e| format!("plugin host lock poisoned: {e}"))?
+        .ai_cancel(&request_id)
+}
+
 /// Append a batch of pre-serialized JSONL action-log lines to durable storage.
 /// Best-effort: the frontend ignores the result so logging never breaks the app.
 #[tauri::command]

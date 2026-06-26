@@ -1,0 +1,25 @@
+[plugin]
+id = "ediater.claude"
+name = "Claude"
+version = "0.1.0"
+description = "Chat with Claude (streaming). Set ANTHROPIC_API_KEY for real responses; otherwise runs in mock mode."
+
+[engine]
+ediater = ">=0.0.0"
+protocol = "1.0"
+
+[entry.command]
+program = "node"
+args = ["index.mjs"]
+
+[capabilities]
+activationEvents = ["onAiAction:claude.chat"]
+
+[[capabilities.aiActions]]
+id = "claude.chat"
+title = "Claude: Chat"
+streaming = true
+
+[permissions]
+network = ["api.anthropic.com"]
+env = ["ANTHROPIC_API_KEY"]

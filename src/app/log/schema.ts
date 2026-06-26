@@ -64,7 +64,12 @@ export type ActionSource =
 export type CommandVia = "palette" | "keybinding";
 /** The light/dark family a theme belongs to. */
 export type ThemeKindStr = "light" | "dark";
-export type PanelKindStr = "explorer" | "editor" | "terminal" | "search";
+export type PanelKindStr =
+  | "explorer"
+  | "editor"
+  | "terminal"
+  | "search"
+  | "ai";
 export type SplitEdgeStr = "left" | "right" | "top" | "bottom";
 
 /** A file reference: a (possibly redacted) path plus cheap metadata. */

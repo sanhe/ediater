@@ -61,7 +61,19 @@ pub struct Capabilities {
     #[serde(default)]
     pub commands: Vec<CommandContribution>,
     #[serde(default)]
+    pub ai_actions: Vec<AiAction>,
+    #[serde(default)]
     pub activation_events: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiAction {
+    pub id: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub streaming: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -94,6 +106,11 @@ impl Manifest {
             .formatters
             .iter()
             .any(|f| f.language_id == language_id)
+    }
+
+    /// Does this plugin provide the given AI action?
+    pub fn provides_ai_action(&self, action_id: &str) -> bool {
+        self.capabilities.ai_actions.iter().any(|a| a.id == action_id)
     }
 }
 

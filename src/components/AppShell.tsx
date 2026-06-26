@@ -65,6 +65,12 @@ export function AppShell({ backendStatus }: AppShellProps) {
               >
                 Terminal
               </button>
+              <button
+                className="btn"
+                onClick={() => dispatch({ type: "togglePanelKind", kind: "ai" })}
+              >
+                AI
+              </button>
             </>
           )}
           <select
