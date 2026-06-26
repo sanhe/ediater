@@ -12,10 +12,20 @@ use crate::action_log;
 use crate::fs::io::{self, FileContent};
 use crate::fs::listing::{self, FileEntry};
 use crate::fs::watch;
+use crate::plugins::host::PluginDescriptor;
 use crate::pty::session as pty;
 use crate::search::{files as search_files_mod, text as search_text_mod};
 use crate::session;
 use crate::state::AppState;
+
+/// Directories scanned for plugins (currently the per-user app-data dir).
+fn plugin_dirs(app: &AppHandle) -> Vec<std::path::PathBuf> {
+    let mut dirs = Vec::new();
+    if let Ok(cfg) = app.path().app_config_dir() {
+        dirs.push(cfg.join("plugins"));
+    }
+    dirs
+}
 
 /// Health check. Returns a version string so the frontend can confirm the
 /// backend is reachable.
@@ -195,6 +205,55 @@ pub fn search_files(
     limit: Option<usize>,
 ) -> Result<Vec<search_files_mod::FuzzyMatch>, String> {
     Ok(search_files_mod::search_files(&query, &root, limit.unwrap_or(50)))
+}
+
+/// List discovered plugins and their contributions.
+#[tauri::command]
+pub fn plugins_list(
+    app: AppHandle,
+    state: State<AppState>,
+) -> Result<Vec<PluginDescriptor>, String> {
+    let dirs = plugin_dirs(&app);
+    let mut host = state
+        .plugin_host
+        .lock()
+        .map_err(|e| format!("plugin host lock poisoned: {e}"))?;
+    host.ensure_discovered(&dirs);
+    Ok(host.list())
+}
+
+/// Re-scan the plugins directory.
+#[tauri::command]
+pub fn plugins_reload(
+    app: AppHandle,
+    state: State<AppState>,
+) -> Result<Vec<PluginDescriptor>, String> {
+    let dirs = plugin_dirs(&app);
+    let mut host = state
+        .plugin_host
+        .lock()
+        .map_err(|e| format!("plugin host lock poisoned: {e}"))?;
+    host.discover(&dirs);
+    Ok(host.list())
+}
+
+/// Format a document via a formatter plugin for `language_id`. Returns the
+/// formatted text, or an error if no plugin handles the language.
+#[tauri::command]
+pub fn format_document(
+    app: AppHandle,
+    state: State<AppState>,
+    path: String,
+    content: String,
+    language_id: String,
+) -> Result<String, String> {
+    let dirs = plugin_dirs(&app);
+    let mut host = state
+        .plugin_host
+        .lock()
+        .map_err(|e| format!("plugin host lock poisoned: {e}"))?;
+    host.ensure_discovered(&dirs);
+    host.format(&path, &language_id, &content)
 }
 
 /// Append a batch of pre-serialized JSONL action-log lines to durable storage.

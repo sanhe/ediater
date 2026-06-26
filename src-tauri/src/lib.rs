@@ -1,6 +1,7 @@
 mod action_log;
 mod commands;
 mod fs;
+mod plugins;
 mod pty;
 mod search;
 mod session;
@@ -35,6 +36,9 @@ pub fn run() {
             commands::search_text,
             commands::cancel_search,
             commands::search_files,
+            commands::plugins_list,
+            commands::plugins_reload,
+            commands::format_document,
             commands::append_action_log,
         ])
         .run(tauri::generate_context!())

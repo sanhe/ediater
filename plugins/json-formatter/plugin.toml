@@ -1,0 +1,20 @@
+[plugin]
+id = "ediater.json-formatter"
+name = "JSON Formatter"
+version = "0.1.0"
+description = "Formats JSON files (pretty-print with 2-space indent)."
+
+[engine]
+ediater = ">=0.0.0"
+protocol = "1.0"
+
+[entry.command]
+program = "node"
+args = ["index.mjs"]
+
+[capabilities]
+activationEvents = ["onLanguage:json", "onCommand:json.format"]
+
+[[capabilities.formatters]]
+languageId = "json"
+extensions = [".json"]

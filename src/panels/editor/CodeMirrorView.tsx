@@ -4,7 +4,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { resolveLanguage } from "./cm/languages";
-import { onReveal } from "./reveal";
+import { onReveal, onSetText } from "./reveal";
 import type { ThemeKind } from "../../app/theme/themes";
 
 interface CodeMirrorViewProps {
@@ -143,6 +143,18 @@ export function CodeMirrorView({
         effects: EditorView.scrollIntoView(pos, { y: "center" }),
       });
       view.focus();
+    });
+  }, [path]);
+
+  // Replace content on request (e.g. applying a formatter's output).
+  useEffect(() => {
+    return onSetText(path, (text) => {
+      const view = viewRef.current;
+      if (!view || text === view.state.doc.toString()) return;
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: text },
+        userEvent: "format",
+      });
     });
   }, [path]);
 

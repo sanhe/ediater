@@ -5,6 +5,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
 use crate::fs::watch::ProjectWatcher;
+use crate::plugins::host::PluginHost;
 use crate::pty::session::PtySession;
 
 #[derive(Default)]
@@ -16,6 +17,8 @@ pub struct AppState {
     pub ptys: Mutex<HashMap<String, PtySession>>,
     /// Cancel flags for in-flight text searches, keyed by search id.
     pub searches: Mutex<HashMap<String, Arc<AtomicBool>>>,
+    /// External-process plugin host (discovery + live connections).
+    pub plugin_host: Mutex<PluginHost>,
     /// Serializes action-log appends so concurrent batches never interleave.
     pub log_lock: Mutex<()>,
 }

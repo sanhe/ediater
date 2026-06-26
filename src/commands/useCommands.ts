@@ -10,6 +10,8 @@ import {
 } from "../app/theme/themes";
 import { findGroupById } from "../layout/layout";
 import { log } from "../app/log/actionLog";
+import { formatDocument } from "../app/ipc/commands";
+import { requestSetText } from "../panels/editor/reveal";
 import type { Command } from "./types";
 
 /**
@@ -56,6 +58,26 @@ export function useCommands(): Command[] {
         category: "File",
         run: () => {
           if (activePath) void docs.save(activePath);
+        },
+      },
+      {
+        id: "editor.format",
+        title: "Format Document",
+        category: "Editor",
+        keybinding: "Shift+Alt+f",
+        run: () => {
+          if (!activePath) return;
+          const path = activePath;
+          const doc = docs.docs[path];
+          if (!doc) return;
+          const languageId = path.split(".").pop() ?? "";
+          void formatDocument(path, doc.content, languageId)
+            .then((formatted) => {
+              if (typeof formatted === "string" && formatted !== doc.content) {
+                requestSetText(path, formatted);
+              }
+            })
+            .catch((err) => console.error("format failed", err));
         },
       },
       {

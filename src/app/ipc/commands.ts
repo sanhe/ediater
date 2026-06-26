@@ -177,6 +177,34 @@ export function searchFiles(
   return invoke<FuzzyMatch[]>("search_files", { query, root, limit });
 }
 
+export interface PluginDescriptor {
+  id: string;
+  name: string;
+  version: string;
+  /** Language ids this plugin can format. */
+  formatters: string[];
+  commands: { id: string; title: string }[];
+}
+
+/** List discovered plugins and their contributions. */
+export function pluginsList(): Promise<PluginDescriptor[]> {
+  return invoke<PluginDescriptor[]>("plugins_list");
+}
+
+/** Re-scan the plugins directory. */
+export function pluginsReload(): Promise<PluginDescriptor[]> {
+  return invoke<PluginDescriptor[]>("plugins_reload");
+}
+
+/** Format a document via a formatter plugin; resolves to the formatted text. */
+export function formatDocument(
+  path: string,
+  content: string,
+  languageId: string,
+): Promise<string> {
+  return invoke<string>("format_document", { path, content, languageId });
+}
+
 /** Open the native folder picker; returns the chosen path or null. */
 export async function pickFolder(): Promise<string | null> {
   const result = await openDialog({ directory: true, multiple: false });

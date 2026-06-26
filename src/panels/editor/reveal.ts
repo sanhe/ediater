@@ -65,3 +65,27 @@ export function requestReveal(path: string, line: number, column?: number): void
     setTimeout(() => clearPending(path), PENDING_TTL_MS),
   );
 }
+
+// --- set-text channel (e.g. applying a formatter's output to the live view) ---
+
+type TextHandler = (text: string) => void;
+const textHandlers = new Map<string, Set<TextHandler>>();
+
+export function onSetText(path: string, handler: TextHandler): () => void {
+  let set = textHandlers.get(path);
+  if (!set) {
+    set = new Set();
+    textHandlers.set(path, set);
+  }
+  set.add(handler);
+  return () => {
+    const current = textHandlers.get(path);
+    current?.delete(handler);
+    if (current && current.size === 0) textHandlers.delete(path);
+  };
+}
+
+/** Replace the live editor content for `path` (no-op if it isn't mounted). */
+export function requestSetText(path: string, text: string): void {
+  textHandlers.get(path)?.forEach((h) => h(text));
+}
