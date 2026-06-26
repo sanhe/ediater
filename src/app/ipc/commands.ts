@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, Channel } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
 /**
@@ -60,6 +60,41 @@ export function readFile(path: string): Promise<FileContent> {
 /** Write content to a file; resolves to the new version (mtime in ms). */
 export function writeFile(path: string, content: string): Promise<number> {
   return invoke<number>("write_file", { path, content });
+}
+
+export interface PtySpawnOptions {
+  cwd?: string;
+  shell?: string;
+  cols: number;
+  rows: number;
+  /** Channel receiving base64-encoded output chunks from the shell. */
+  onData: Channel<string>;
+}
+
+/** Spawn a shell in a PTY; resolves to the pty id. */
+export function ptySpawn(opts: PtySpawnOptions): Promise<string> {
+  return invoke<string>("pty_spawn", {
+    cwd: opts.cwd,
+    shell: opts.shell,
+    cols: opts.cols,
+    rows: opts.rows,
+    onData: opts.onData,
+  });
+}
+
+/** Send user input to a PTY. */
+export function ptyWrite(id: string, data: string): Promise<void> {
+  return invoke<void>("pty_write", { id, data });
+}
+
+/** Resize a PTY to a character grid. */
+export function ptyResize(id: string, cols: number, rows: number): Promise<void> {
+  return invoke<void>("pty_resize", { id, cols, rows });
+}
+
+/** Kill a PTY session. */
+export function ptyKill(id: string): Promise<void> {
+  return invoke<void>("pty_kill", { id });
 }
 
 /** Open the native folder picker; returns the chosen path or null. */

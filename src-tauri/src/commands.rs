@@ -2,11 +2,13 @@
 //! respective service modules.
 
 use serde_json::Value;
+use tauri::ipc::Channel;
 use tauri::{AppHandle, State};
 
 use crate::fs::io::{self, FileContent};
 use crate::fs::listing::{self, FileEntry};
 use crate::fs::watch;
+use crate::pty::session as pty;
 use crate::session;
 use crate::state::AppState;
 
@@ -59,5 +61,71 @@ pub fn watch_paths(
         .watcher
         .lock()
         .map_err(|e| format!("watcher lock poisoned: {e}"))? = Some(watcher);
+    Ok(())
+}
+
+/// Spawn a shell in a new PTY; output streams to `on_data`. Returns the pty id.
+#[tauri::command]
+pub fn pty_spawn(
+    app: AppHandle,
+    state: State<AppState>,
+    cwd: Option<String>,
+    shell: Option<String>,
+    cols: u16,
+    rows: u16,
+    on_data: Channel<String>,
+) -> Result<String, String> {
+    let id = pty::next_pty_id();
+    let session = pty::spawn(app, id.clone(), cwd, shell, cols, rows, on_data)?;
+    state
+        .ptys
+        .lock()
+        .map_err(|e| format!("pty lock poisoned: {e}"))?
+        .insert(id.clone(), session);
+    Ok(id)
+}
+
+/// Write bytes to a PTY's stdin (what the user typed).
+#[tauri::command]
+pub fn pty_write(state: State<AppState>, id: String, data: String) -> Result<(), String> {
+    let mut map = state
+        .ptys
+        .lock()
+        .map_err(|e| format!("pty lock poisoned: {e}"))?;
+    match map.get_mut(&id) {
+        Some(session) => session.write(data.as_bytes()),
+        None => Err(format!("no pty {id}")),
+    }
+}
+
+/// Resize a PTY to the given character grid.
+#[tauri::command]
+pub fn pty_resize(
+    state: State<AppState>,
+    id: String,
+    cols: u16,
+    rows: u16,
+) -> Result<(), String> {
+    let map = state
+        .ptys
+        .lock()
+        .map_err(|e| format!("pty lock poisoned: {e}"))?;
+    match map.get(&id) {
+        Some(session) => session.resize(cols, rows),
+        None => Err(format!("no pty {id}")),
+    }
+}
+
+/// Kill a PTY and drop its session.
+#[tauri::command]
+pub fn pty_kill(state: State<AppState>, id: String) -> Result<(), String> {
+    if let Some(mut session) = state
+        .ptys
+        .lock()
+        .map_err(|e| format!("pty lock poisoned: {e}"))?
+        .remove(&id)
+    {
+        session.kill();
+    }
     Ok(())
 }

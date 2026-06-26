@@ -1,5 +1,6 @@
 mod commands;
 mod fs;
+mod pty;
 mod session;
 mod state;
 
@@ -18,6 +19,10 @@ pub fn run() {
             commands::read_file,
             commands::write_file,
             commands::watch_paths,
+            commands::pty_spawn,
+            commands::pty_write,
+            commands::pty_resize,
+            commands::pty_kill,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ediater application");

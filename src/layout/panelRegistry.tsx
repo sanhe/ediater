@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import { panelTitle, type PanelKind, type PanelState } from "./panel";
 import { ExplorerPanel } from "../panels/explorer/ExplorerPanel";
 import { EditorPanel } from "../panels/editor/EditorPanel";
+import { TerminalPanel } from "../panels/terminal/TerminalPanel";
 
 /** Props passed to every panel body component. */
 export interface PanelBodyProps {
@@ -22,6 +23,6 @@ function Placeholder({ panel }: PanelBodyProps) {
 export const panelRegistry: Record<PanelKind, ComponentType<PanelBodyProps>> = {
   explorer: ExplorerPanel,
   editor: EditorPanel,
-  terminal: Placeholder,
+  terminal: TerminalPanel,
   search: Placeholder,
 };

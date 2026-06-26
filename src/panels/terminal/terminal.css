@@ -1,0 +1,15 @@
+.terminal-host {
+  position: absolute;
+  inset: 0;
+  padding: 4px 6px;
+  background: var(--editor-bg);
+  overflow: hidden;
+}
+
+.terminal-host .xterm {
+  height: 100%;
+}
+
+.terminal-host .xterm-viewport {
+  overflow-y: auto;
+}
