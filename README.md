@@ -67,6 +67,9 @@ subsequent runs are fast.
 pnpm tauri build      # produces a platform installer/app under src-tauri/target
 ```
 
+For signing, notarization, and publishing releases (incl. the GitHub Actions
+release workflow), see [RELEASE.md](RELEASE.md).
+
 ### Other scripts
 
 ```bash
