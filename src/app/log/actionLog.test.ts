@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_SETTINGS } from "../settings";
 import { createLogger, type ActionLogger } from "./actionLog";
 import type { LoggerOptions } from "./actionLog";
 import type { LogConfig } from "./config";
@@ -10,6 +11,7 @@ function prev(): SessionData {
     version: 3,
     ui: { theme: "dark", customThemes: [], activeGroupId: null },
     layout: null,
+    settings: DEFAULT_SETTINGS,
     panels: {},
   };
 }

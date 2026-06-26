@@ -35,6 +35,7 @@ export type ActionVerb =
   | "tab.split"
   | "split.resize"
   | "panel.toggle"
+  | "settings.update"
   // command system
   | "command.run"
   // document ops

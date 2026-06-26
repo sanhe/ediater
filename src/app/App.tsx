@@ -23,6 +23,7 @@ import { DocumentsProvider } from "../panels/editor/documents";
 import { requestReveal } from "../panels/editor/reveal";
 import { loadPluginGrammars } from "../plugins/grammars";
 import { CommandsLayer } from "../commands/CommandsLayer";
+import { SettingsModal } from "./settings/SettingsModal";
 import { AppShell } from "../components/AppShell";
 
 /**
@@ -163,9 +164,18 @@ export function App() {
     [loggedDispatch],
   );
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const openSettings = useCallback(() => setSettingsOpen(true), []);
+
   const workspace = useMemo<WorkspaceContextValue>(
-    () => ({ session, dispatch: loggedDispatch, openFolder, openFile }),
-    [session, loggedDispatch, openFolder, openFile],
+    () => ({
+      session,
+      dispatch: loggedDispatch,
+      openFolder,
+      openFile,
+      openSettings,
+    }),
+    [session, loggedDispatch, openFolder, openFile, openSettings],
   );
 
   return (
@@ -178,6 +188,9 @@ export function App() {
           <DocumentsProvider>
             <AppShell backendStatus={backendStatus} />
             <CommandsLayer />
+            {settingsOpen && (
+              <SettingsModal onClose={() => setSettingsOpen(false)} />
+            )}
           </DocumentsProvider>
         </ThemeWorkshopProvider>
       </ThemeController>

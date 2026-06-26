@@ -16,7 +16,7 @@ interface AppShellProps {
  * The outer chrome: titlebar, the docking workspace, and the status bar.
  */
 export function AppShell({ backendStatus }: AppShellProps) {
-  const { session, dispatch, openFolder } = useWorkspace();
+  const { session, dispatch, openFolder, openSettings } = useWorkspace();
   const docs = useDocuments();
   const themes = useAllThemes();
   const { openEditor } = useThemeWorkshop();
@@ -107,6 +107,14 @@ export function AppShell({ backendStatus }: AppShellProps) {
             onClick={() => openEditor()}
           >
             Customize…
+          </button>
+          <button
+            className="btn"
+            title="Settings (⌘,)"
+            aria-label="Settings"
+            onClick={() => openSettings()}
+          >
+            ⚙
           </button>
         </div>
       </header>

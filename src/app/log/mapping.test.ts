@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_SETTINGS } from "../settings";
 import {
   commandPayload,
   countLines,
@@ -21,6 +22,7 @@ function state(panels: Record<string, PanelState> = {}): SessionData {
     version: 3,
     ui: { theme: "dark", customThemes: [], activeGroupId: null },
     layout: null,
+    settings: DEFAULT_SETTINGS,
     panels,
   };
 }

@@ -20,7 +20,7 @@ import type { Command } from "./types";
  * will contribute additional commands here in a later milestone.
  */
 export function useCommands(): Command[] {
-  const { session, dispatch, openFolder } = useWorkspace();
+  const { session, dispatch, openFolder, openSettings } = useWorkspace();
   const docs = useDocuments();
   const resolvedTheme = useResolvedTheme();
   const themes = useAllThemes();
@@ -51,6 +51,13 @@ export function useCommands(): Command[] {
         title: "Open Folder…",
         category: "File",
         run: () => void openFolder(),
+      },
+      {
+        id: "preferences.settings",
+        title: "Settings…",
+        category: "Preferences",
+        keybinding: "Mod+,",
+        run: () => openSettings(),
       },
       {
         id: "file.save",
@@ -157,8 +164,22 @@ export function useCommands(): Command[] {
         ),
     ];
 
-    // Wrap every command so palette and keybinding executions both record a
-    // `command.run` event whose seq becomes the cause of the dispatches it fires.
-    return commands.map((c) => ({ ...c, run: () => log.command(c, c.run) }));
-  }, [session, dispatch, openFolder, docs, resolvedTheme, themes, workshop]);
+    // Apply user keybinding overrides, then wrap every command so palette and
+    // keybinding executions both record a `command.run` event whose seq becomes
+    // the cause of the dispatches it fires.
+    return commands.map((c) => ({
+      ...c,
+      keybinding: session.settings.keybindings[c.id] ?? c.keybinding,
+      run: () => log.command(c, c.run),
+    }));
+  }, [
+    session,
+    dispatch,
+    openFolder,
+    openSettings,
+    docs,
+    resolvedTheme,
+    themes,
+    workshop,
+  ]);
 }

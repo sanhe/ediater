@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Compartment, EditorState, Prec } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
+import { indentUnit } from "@codemirror/language";
 import { basicSetup } from "codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { resolveLanguage } from "./cm/languages";
@@ -15,9 +16,19 @@ interface CodeMirrorViewProps {
   readonly: boolean;
   /** Base appearance of the active theme; selects the syntax palette. */
   kind: ThemeKind;
+  fontSize: number;
+  tabSize: number;
   onChange: (content: string) => void;
   onSave: () => void;
 }
+
+const fontSizeTheme = (px: number) =>
+  EditorView.theme({ "&": { fontSize: `${px}px` } });
+
+const tabSizeExt = (n: number) => [
+  EditorState.tabSize.of(n),
+  indentUnit.of(" ".repeat(n)),
+];
 
 /**
  * Editor chrome (background, gutters, selection, cursor) driven by the active
@@ -58,6 +69,8 @@ export function CodeMirrorView({
   initialContent,
   readonly,
   kind,
+  fontSize,
+  tabSize,
   onChange,
   onSave,
 }: CodeMirrorViewProps) {
@@ -66,6 +79,8 @@ export function CodeMirrorView({
   const themeCompartment = useRef(new Compartment());
   const languageCompartment = useRef(new Compartment());
   const textmateCompartment = useRef(new Compartment());
+  const fontSizeCompartment = useRef(new Compartment());
+  const tabSizeCompartment = useRef(new Compartment());
   // A plugin-contributed TextMate grammar for this file, if any.
   const tmLang = useRef<string | null>(grammarLanguageForPath(path));
 
@@ -88,6 +103,8 @@ export function CodeMirrorView({
         textmateCompartment.current.of(
           tmLang.current ? textmateHighlighter(tmLang.current) : [],
         ),
+        fontSizeCompartment.current.of(fontSizeTheme(fontSize)),
+        tabSizeCompartment.current.of(tabSizeExt(tabSize)),
         EditorState.readOnly.of(readonly),
         Prec.highest(
           keymap.of([
@@ -148,6 +165,18 @@ export function CodeMirrorView({
       });
     }
   }, [kind]);
+
+  useEffect(() => {
+    viewRef.current?.dispatch({
+      effects: fontSizeCompartment.current.reconfigure(fontSizeTheme(fontSize)),
+    });
+  }, [fontSize]);
+
+  useEffect(() => {
+    viewRef.current?.dispatch({
+      effects: tabSizeCompartment.current.reconfigure(tabSizeExt(tabSize)),
+    });
+  }, [tabSize]);
 
   // Reveal a line on request (e.g. clicking a search result).
   useEffect(() => {

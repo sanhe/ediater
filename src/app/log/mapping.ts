@@ -236,6 +236,11 @@ export function sessionEvent(
         },
       };
 
+    case "updateSettings":
+      // Settings values aren't logged (they may be sensitive, e.g. keybindings);
+      // just record that settings changed.
+      return { action: "settings.update", source: "reducer" };
+
     default:
       return assertNever(action);
   }

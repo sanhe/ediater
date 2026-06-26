@@ -32,8 +32,8 @@ interface DocumentsApi {
   ensureOpen: (path: string) => void;
   /** Update buffer content from an editor edit (marks dirty). */
   update: (path: string, content: string) => void;
-  /** Persist the buffer to disk. */
-  save: (path: string) => Promise<void>;
+  /** Persist the buffer to disk (optionally overriding the content). */
+  save: (path: string, content?: string) => Promise<void>;
   /** Drop the in-memory buffer. */
   close: (path: string) => void;
 }
@@ -117,15 +117,20 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
   );
 
   const save = useCallback(
-    async (path: string) => {
+    async (path: string, content?: string) => {
       const doc = docsRef.current[path];
       if (!doc || doc.loading || doc.readonly) return;
+      const text = content ?? doc.content;
       const wasDirty = doc.dirty;
-      const bytes = doc.content.length;
       try {
-        const version = await writeFile(path, doc.content);
-        patch(path, { baseVersion: version, dirty: false, error: undefined });
-        log.docSave(path, { bytes, wasDirty, version });
+        const version = await writeFile(path, text);
+        patch(path, {
+          content: text,
+          baseVersion: version,
+          dirty: false,
+          error: undefined,
+        });
+        log.docSave(path, { bytes: text.length, wasDirty, version });
       } catch (err) {
         patch(path, { error: String(err) });
       }

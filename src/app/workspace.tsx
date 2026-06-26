@@ -14,6 +14,8 @@ export interface WorkspaceContextValue {
   openFolder: () => Promise<void>;
   /** Open a file in the editor, optionally revealing a 1-based line. */
   openFile: (path: string, line?: number) => void;
+  /** Open the settings dialog. */
+  openSettings: () => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);

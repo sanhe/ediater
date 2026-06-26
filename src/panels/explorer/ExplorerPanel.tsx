@@ -7,8 +7,14 @@ import { FileTree } from "./FileTree";
  * rooted at its own folder, so several projects can be open at once.
  */
 export function ExplorerPanel({ panel }: PanelBodyProps) {
-  const { openFile } = useWorkspace();
+  const { session, openFile } = useWorkspace();
   if (panel.kind !== "explorer") return null;
 
-  return <FileTree root={panel.root} showHidden={false} onOpenFile={openFile} />;
+  return (
+    <FileTree
+      root={panel.root}
+      showHidden={session.settings.files.showHidden}
+      onOpenFile={openFile}
+    />
+  );
 }

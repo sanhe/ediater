@@ -15,6 +15,7 @@ import {
   type Theme,
   type ThemePreference,
 } from "../theme/themes";
+import { DEFAULT_SETTINGS, sanitizeSettings, type Settings } from "../settings";
 
 export const SESSION_SCHEMA_VERSION = 3;
 
@@ -32,6 +33,8 @@ export interface SessionData {
   layout: LayoutNode | null;
   /** Panel state keyed by panel id; groups in `layout` reference these. */
   panels: Record<string, PanelState>;
+  /** User-configurable settings. */
+  settings: Settings;
 }
 
 export function defaultSession(): SessionData {
@@ -40,6 +43,7 @@ export function defaultSession(): SessionData {
     ui: { theme: SYSTEM_THEME, customThemes: [], activeGroupId: null },
     layout: null,
     panels: {},
+    settings: DEFAULT_SETTINGS,
   };
 }
 
@@ -61,6 +65,7 @@ export function migrateSession(raw: unknown): SessionData {
   const theme =
     typeof ui?.theme === "string" && ui.theme ? ui.theme : base.ui.theme;
   const customThemes = sanitizeCustomThemes(ui?.customThemes);
+  const settings = sanitizeSettings(data.settings);
 
   if (data.version === SESSION_SCHEMA_VERSION) {
     const activeGroupId =
@@ -73,8 +78,9 @@ export function migrateSession(raw: unknown): SessionData {
       ui: { theme, customThemes, activeGroupId },
       layout,
       panels,
+      settings,
     };
   }
 
-  return { ...base, ui: { ...base.ui, theme, customThemes } };
+  return { ...base, ui: { ...base.ui, theme, customThemes }, settings };
 }

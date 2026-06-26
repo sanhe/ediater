@@ -16,6 +16,7 @@ import {
 } from "../../layout/layout";
 import { newId } from "../../layout/ids";
 import type { PanelKind, PanelState } from "../../layout/panel";
+import type { Settings } from "../settings";
 
 /**
  * All mutations to SessionData flow through this pure reducer. The docking
@@ -40,7 +41,8 @@ export type SessionAction =
       edge: SplitEdge;
     }
   | { type: "resizeSplit"; splitId: string; sizes: number[] }
-  | { type: "togglePanelKind"; kind: PanelKind };
+  | { type: "togglePanelKind"; kind: PanelKind }
+  | { type: "updateSettings"; settings: Settings };
 
 const splitId = () => newId("split");
 
@@ -160,6 +162,9 @@ export function sessionReducer(
 
     case "setTheme":
       return { ...state, ui: { ...state.ui, theme: action.theme } };
+
+    case "updateSettings":
+      return { ...state, settings: action.settings };
 
     case "upsertCustomTheme": {
       const exists = state.ui.customThemes.some(
