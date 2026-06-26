@@ -23,6 +23,9 @@ export type ActionVerb =
   // workspace structure — 1:1 with reducer SessionActions, renamed for stability
   | "session.hydrate"
   | "theme.set"
+  | "theme.upsert"
+  | "theme.import"
+  | "theme.remove"
   | "folder.open"
   | "file.open"
   | "panel.close"
@@ -59,7 +62,8 @@ export type ActionSource =
   | "event";
 
 export type CommandVia = "palette" | "keybinding";
-export type ThemeModeStr = "light" | "dark";
+/** The light/dark family a theme belongs to. */
+export type ThemeKindStr = "light" | "dark";
 export type PanelKindStr = "explorer" | "editor" | "terminal" | "search";
 export type SplitEdgeStr = "left" | "right" | "top" | "bottom";
 
@@ -93,10 +97,13 @@ export type ActionPayload =
       kind: "run";
       appVersion: string;
       platform: string;
-      theme: ThemeModeStr;
+      /** Active theme preference at start: a theme id or "system". */
+      theme: string;
       schemaVersion: number;
     }
-  | { kind: "theme"; to: ThemeModeStr }
+  | { kind: "theme"; to: string }
+  | { kind: "themeEdit"; themeId: string; label?: string; themeKind?: ThemeKindStr }
+  | { kind: "themeImport"; count: number; ids: string[] }
   | { kind: "folder"; root: string; reused: boolean }
   | { kind: "file"; file: FileRef; reused: boolean }
   | {

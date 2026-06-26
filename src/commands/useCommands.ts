@@ -1,6 +1,13 @@
 import { useMemo } from "react";
 import { useWorkspace } from "../app/workspace";
 import { useDocuments } from "../panels/editor/documents";
+import { useResolvedTheme, useAllThemes } from "../app/theme/ThemeContext";
+import { useThemeWorkshop } from "../app/theme/ThemeWorkshop";
+import {
+  DEFAULT_DARK_THEME_ID,
+  DEFAULT_LIGHT_THEME_ID,
+  SYSTEM_THEME,
+} from "../app/theme/themes";
 import { findGroupById } from "../layout/layout";
 import { log } from "../app/log/actionLog";
 import type { Command } from "./types";
@@ -13,6 +20,9 @@ import type { Command } from "./types";
 export function useCommands(): Command[] {
   const { session, dispatch, openFolder } = useWorkspace();
   const docs = useDocuments();
+  const resolvedTheme = useResolvedTheme();
+  const themes = useAllThemes();
+  const workshop = useThemeWorkshop();
 
   return useMemo<Command[]>(() => {
     // Prefer the active group's file; fall back to any open editor.
@@ -64,18 +74,69 @@ export function useCommands(): Command[] {
       },
       {
         id: "view.toggleTheme",
-        title: "Toggle Color Theme",
+        title: "Toggle Light/Dark Theme",
         category: "View",
         run: () =>
           dispatch({
             type: "setTheme",
-            theme: session.ui.theme === "dark" ? "light" : "dark",
+            theme:
+              resolvedTheme.kind === "dark"
+                ? DEFAULT_LIGHT_THEME_ID
+                : DEFAULT_DARK_THEME_ID,
           }),
       },
+      {
+        id: "preferences.theme.new",
+        title: "New Custom Theme…",
+        category: "Preferences",
+        run: () => workshop.openEditor(),
+      },
+      {
+        id: "preferences.theme.customize",
+        title: "Customize Current Theme…",
+        category: "Preferences",
+        run: () => workshop.openEditor(resolvedTheme.id),
+      },
+      {
+        id: "preferences.theme.import",
+        title: "Import Theme from File…",
+        category: "Preferences",
+        run: () => workshop.importThemes(),
+      },
+      {
+        id: "preferences.theme.export",
+        title: "Export Current Theme…",
+        category: "Preferences",
+        run: () => workshop.exportTheme(resolvedTheme),
+      },
+      {
+        id: "preferences.theme.system",
+        title: "Color Theme: System",
+        category: "Preferences",
+        run: () => dispatch({ type: "setTheme", theme: SYSTEM_THEME }),
+      },
+      ...themes.map(
+        (t): Command => ({
+          id: `preferences.theme.set.${t.id}`,
+          title: `Color Theme: ${t.label}`,
+          category: "Preferences",
+          run: () => dispatch({ type: "setTheme", theme: t.id }),
+        }),
+      ),
+      ...themes
+        .filter((t) => !t.builtin)
+        .map(
+          (t): Command => ({
+            id: `preferences.theme.delete.${t.id}`,
+            title: `Delete Custom Theme: ${t.label}`,
+            category: "Preferences",
+            run: () => workshop.deleteTheme(t),
+          }),
+        ),
     ];
 
     // Wrap every command so palette and keybinding executions both record a
     // `command.run` event whose seq becomes the cause of the dispatches it fires.
     return commands.map((c) => ({ ...c, run: () => log.command(c, c.run) }));
-  }, [session, dispatch, openFolder, docs]);
+  }, [session, dispatch, openFolder, docs, resolvedTheme, themes, workshop]);
 }

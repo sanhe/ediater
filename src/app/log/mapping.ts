@@ -91,6 +91,36 @@ export function sessionEvent(
         payload: { kind: "theme", to: action.theme },
       };
 
+    case "upsertCustomTheme":
+      return {
+        action: "theme.upsert",
+        source: "reducer",
+        payload: {
+          kind: "themeEdit",
+          themeId: action.theme.id,
+          label: action.theme.label,
+          themeKind: action.theme.kind,
+        },
+      };
+
+    case "addImportedThemes":
+      return {
+        action: "theme.import",
+        source: "reducer",
+        payload: {
+          kind: "themeImport",
+          count: action.themes.length,
+          ids: action.themes.map((t) => t.id),
+        },
+      };
+
+    case "removeCustomTheme":
+      return {
+        action: "theme.remove",
+        source: "reducer",
+        payload: { kind: "themeEdit", themeId: action.id },
+      };
+
     case "openFolderTab": {
       const reused = Object.values(prev.panels).some(
         (p) => p.kind === "explorer" && p.root === action.root,

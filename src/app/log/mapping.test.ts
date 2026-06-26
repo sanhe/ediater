@@ -8,6 +8,10 @@ import {
 } from "./mapping";
 import type { SessionData } from "../session/sessionData";
 import type { PanelState } from "../../layout/panel";
+import type { Theme } from "../theme/themes";
+
+const fakeTheme = (id: string, label: string, kind: "light" | "dark"): Theme =>
+  ({ id, label, kind }) as unknown as Theme;
 
 const scope = "full" as const;
 const ctx = {};
@@ -15,7 +19,7 @@ const ctx = {};
 function state(panels: Record<string, PanelState> = {}): SessionData {
   return {
     version: 3,
-    ui: { theme: "dark", activeGroupId: null },
+    ui: { theme: "dark", customThemes: [], activeGroupId: null },
     layout: null,
     panels,
   };
@@ -60,6 +64,32 @@ describe("sessionEvent", () => {
     const e = sessionEvent({ type: "setTheme", theme: "light" }, state(), scope, ctx);
     expect(e.action).toBe("theme.set");
     expect(e.payload).toEqual({ kind: "theme", to: "light" });
+  });
+
+  it("maps custom-theme upsert/import/remove", () => {
+    expect(
+      sessionEvent(
+        { type: "upsertCustomTheme", theme: fakeTheme("t1", "T1", "dark") },
+        state(),
+        scope,
+        ctx,
+      ).payload,
+    ).toEqual({ kind: "themeEdit", themeId: "t1", label: "T1", themeKind: "dark" });
+    expect(
+      sessionEvent(
+        {
+          type: "addImportedThemes",
+          themes: [fakeTheme("a", "A", "dark"), fakeTheme("b", "B", "light")],
+        },
+        state(),
+        scope,
+        ctx,
+      ).payload,
+    ).toEqual({ kind: "themeImport", count: 2, ids: ["a", "b"] });
+    expect(
+      sessionEvent({ type: "removeCustomTheme", id: "x" }, state(), scope, ctx)
+        .payload,
+    ).toEqual({ kind: "themeEdit", themeId: "x" });
   });
 
   it("flags reused folders/files from previous state", () => {

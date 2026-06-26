@@ -8,7 +8,7 @@ import type { SessionData } from "../session/sessionData";
 function prev(): SessionData {
   return {
     version: 3,
-    ui: { theme: "dark", activeGroupId: null },
+    ui: { theme: "dark", customThemes: [], activeGroupId: null },
     layout: null,
     panels: {},
   };

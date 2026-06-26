@@ -17,6 +17,8 @@ import {
   type SessionPersister,
 } from "./session/persistence";
 import { WorkspaceProvider, type WorkspaceContextValue } from "./workspace";
+import { ThemeController } from "./theme/ThemeContext";
+import { ThemeWorkshopProvider } from "./theme/ThemeWorkshop";
 import { DocumentsProvider } from "../panels/editor/documents";
 import { CommandsLayer } from "../commands/CommandsLayer";
 import { AppShell } from "../components/AppShell";
@@ -139,11 +141,6 @@ export function App() {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, []);
 
-  // Reflect the theme on the document root so CSS variables switch.
-  useEffect(() => {
-    document.documentElement.dataset.theme = session.ui.theme;
-  }, [session.ui.theme]);
-
   const openFolder = useCallback(async () => {
     const root = await pickFolder();
     if (root) {
@@ -165,10 +162,17 @@ export function App() {
 
   return (
     <WorkspaceProvider value={workspace}>
-      <DocumentsProvider>
-        <AppShell backendStatus={backendStatus} />
-        <CommandsLayer />
-      </DocumentsProvider>
+      <ThemeController
+        preference={session.ui.theme}
+        customThemes={session.ui.customThemes}
+      >
+        <ThemeWorkshopProvider>
+          <DocumentsProvider>
+            <AppShell backendStatus={backendStatus} />
+            <CommandsLayer />
+          </DocumentsProvider>
+        </ThemeWorkshopProvider>
+      </ThemeController>
     </WorkspaceProvider>
   );
 }

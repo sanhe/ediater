@@ -37,7 +37,6 @@ import {
   type ActionVerb,
   type CommandVia,
   type IoDigest,
-  type ThemeModeStr,
 } from "./schema";
 import type { SessionAction } from "../session/reducer";
 import type { SessionData } from "../session/sessionData";
@@ -52,7 +51,8 @@ interface RecordExtra {
 export interface RunStartInfo {
   appVersion?: string;
   platform?: string;
-  theme: ThemeModeStr;
+  /** Active theme preference at start: a theme id or "system". */
+  theme: string;
 }
 
 export interface LoggerOptions {
