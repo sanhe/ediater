@@ -6,7 +6,10 @@ import {
   useRef,
   useState,
 } from "react";
+import { homeDir } from "@tauri-apps/api/path";
 import { ping, loadSession, pickFolder, watchPaths } from "./ipc/commands";
+import { onEvent } from "./ipc/events";
+import { log } from "./log/actionLog";
 import { defaultSession, migrateSession } from "./session/sessionData";
 import { sessionReducer } from "./session/reducer";
 import {
@@ -34,6 +37,31 @@ export function App() {
   const [backendStatus, setBackendStatus] = useState("connecting…");
   const persisterRef = useRef<SessionPersister>(createDebouncedPersister());
 
+  // Latest session, read synchronously by the logger to capture pre-dispatch
+  // ("previous") state without re-rendering dependents.
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+
+  // Every workspace mutation is logged here, then applied by the pure reducer.
+  // Wrapping dispatch (not the reducer) keeps the reducer pure and fires exactly
+  // once under React StrictMode.
+  const loggedDispatch = useCallback<typeof dispatch>((action) => {
+    log.dispatch(action, sessionRef.current);
+    dispatch(action);
+  }, []);
+
+  // Open the action log for this run first (so run.start leads the sequence),
+  // and resolve the home dir so "full" path scope can collapse it to "~".
+  useEffect(() => {
+    log.runStart({
+      theme: sessionRef.current.ui.theme,
+      platform: navigator?.platform ?? "unknown",
+    });
+    void homeDir()
+      .then((home) => log.setHome(home))
+      .catch(() => undefined);
+  }, []);
+
   // On mount: restore the persisted session and ping the backend.
   useEffect(() => {
     let cancelled = false;
@@ -42,7 +70,7 @@ export function App() {
       try {
         const raw = await loadSession();
         if (!cancelled && raw != null) {
-          dispatch({ type: "hydrate", session: migrateSession(raw) });
+          loggedDispatch({ type: "hydrate", session: migrateSession(raw) });
         }
       } catch (err) {
         console.error("Failed to load session", err);
@@ -63,7 +91,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loggedDispatch]);
 
   // The set of open project folders (explorer tabs) drives file watching.
   const explorerRoots = useMemo(() => {
@@ -75,12 +103,25 @@ export function App() {
 
   // Re-arm watchers whenever the set of open folders changes.
   useEffect(() => {
+    log.setRoots(explorerRoots);
     if (hydrated) {
       void watchPaths(explorerRoots).catch((err) =>
         console.error("watchPaths failed", err),
       );
     }
   }, [hydrated, explorerRoots]);
+
+  // Log filesystem changes reported by the backend watcher. This is a separate
+  // subscription from the explorer's own refresh listener.
+  useEffect(() => {
+    const unlisten = onEvent<{ paths: string[] }>(
+      "fs-changed",
+      ({ payload }) => log.fsChanged(payload.paths),
+    );
+    return () => {
+      void unlisten.then((un) => un());
+    };
+  }, []);
 
   // Persist whenever the session changes (but not before initial hydration).
   useEffect(() => {
@@ -89,10 +130,13 @@ export function App() {
     }
   }, [session, hydrated]);
 
-  // Flush any pending save before the window unloads.
+  // Flush any pending save and close the action log before the window unloads.
   useEffect(() => {
     const persister = persisterRef.current;
-    const onBeforeUnload = () => persister.flushNow();
+    const onBeforeUnload = () => {
+      persister.flushNow();
+      log.runEnd();
+    };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, []);
@@ -100,17 +144,20 @@ export function App() {
   const openFolder = useCallback(async () => {
     const root = await pickFolder();
     if (root) {
-      dispatch({ type: "openFolderTab", root });
+      loggedDispatch({ type: "openFolderTab", root });
     }
-  }, []);
+  }, [loggedDispatch]);
 
-  const openFile = useCallback((path: string) => {
-    dispatch({ type: "openFileTab", path });
-  }, []);
+  const openFile = useCallback(
+    (path: string) => {
+      loggedDispatch({ type: "openFileTab", path });
+    },
+    [loggedDispatch],
+  );
 
   const workspace = useMemo<WorkspaceContextValue>(
-    () => ({ session, dispatch, openFolder, openFile }),
-    [session, openFolder, openFile],
+    () => ({ session, dispatch: loggedDispatch, openFolder, openFile }),
+    [session, loggedDispatch, openFolder, openFile],
   );
 
   return (

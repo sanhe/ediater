@@ -8,6 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import { readFile, writeFile } from "../../app/ipc/commands";
+import { log } from "../../app/log/actionLog";
+import { countLines } from "../../app/log/mapping";
 
 /**
  * An open editor document. Buffers are global and keyed by absolute path so the
@@ -82,7 +84,7 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
       });
       loadingRef.current.add(path);
       void readFile(path)
-        .then((file) =>
+        .then((file) => {
           patch(path, {
             content: file.content,
             baseVersion: file.version,
@@ -90,8 +92,13 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
             dirty: false,
             loading: false,
             error: undefined,
-          }),
-        )
+          });
+          log.docOpen(path, {
+            bytes: file.content.length,
+            lines: countLines(file.content),
+            readonly: file.readonly,
+          });
+        })
         .catch((err) =>
           patch(path, { loading: false, error: String(err) }),
         )
@@ -101,7 +108,11 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
   );
 
   const update = useCallback(
-    (path: string, content: string) => patch(path, { content, dirty: true }),
+    (path: string, content: string) => {
+      const prev = docsRef.current[path];
+      log.docEdit(path, prev?.content.length ?? content.length, content.length);
+      patch(path, { content, dirty: true });
+    },
     [patch],
   );
 
@@ -109,9 +120,12 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
     async (path: string) => {
       const doc = docsRef.current[path];
       if (!doc || doc.loading || doc.readonly) return;
+      const wasDirty = doc.dirty;
+      const bytes = doc.content.length;
       try {
         const version = await writeFile(path, doc.content);
         patch(path, { baseVersion: version, dirty: false, error: undefined });
+        log.docSave(path, { bytes, wasDirty, version });
       } catch (err) {
         patch(path, { error: String(err) });
       }
@@ -120,6 +134,8 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
   );
 
   const close = useCallback((path: string) => {
+    const doc = docsRef.current[path];
+    if (doc) log.docClose(path, doc.dirty);
     setDocs((prev) => {
       if (!prev[path]) return prev;
       const next = { ...prev };

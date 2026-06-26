@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { Command } from "./types";
+import { log } from "../app/log/actionLog";
 
 /** Canonical combo string for a keyboard event, e.g. "Mod+Shift+f". */
 export function normalizeKeyEvent(e: KeyboardEvent): string {
@@ -38,6 +39,7 @@ export function useGlobalKeybindings(
       );
       if (cmd) {
         e.preventDefault();
+        log.setNextCommandSource("keybinding", cmd.keybinding);
         cmd.run();
       }
     };

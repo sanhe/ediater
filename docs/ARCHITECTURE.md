@@ -63,6 +63,14 @@ commands/
   CommandPalette.tsx     fuzzy command palette overlay
   keybindings.ts         global keybinding dispatch
   fuzzy.ts               subsequence fuzzy matcher
+app/log/
+  schema.ts              PURE log event contract (verbs, payloads, ActionEvent)
+  config.ts              PURE tunables + env opt-out
+  redact.ts              PURE path/error redaction
+  mapping.ts             PURE action -> log verb/payload mappers (unit-tested)
+  coalescer.ts           PURE edit coalescer + last-wins collapser (unit-tested)
+  client.ts              batched ring buffer -> Rust sink (raw invoke)
+  actionLog.ts           the `log` facade singleton (wires it all; never throws)
 components/AppShell.tsx  titlebar + docking workspace + status bar
 styles/                  global.css (theme tokens) + layout.css
 ```
@@ -72,9 +80,10 @@ styles/                  global.css (theme tokens) + layout.css
 ```
 main.rs        thin launcher -> lib::run()
 lib.rs         Tauri builder: plugins, managed state, command handlers
-state.rs       AppState (the project file watcher handle)
+state.rs       AppState (file watcher handle + action-log lock)
 commands.rs    #[tauri::command] surface
 session.rs     load/save the session blob (atomic write) in the app config dir
+action_log.rs  append-only JSONL action-log sink (daily file, rotation, retention)
 fs/listing.rs  list_directory -> FileEntry[]
 fs/io.rs       read_file / write_file (UTF-8, size-guarded, atomic write)
 fs/watch.rs    recursive multi-root watcher -> debounced `fs-changed` events
@@ -148,10 +157,47 @@ writes the blob atomically (temp file + rename) into the app config dir
 elsewhere). On launch the session is restored and file watchers are re-armed for
 every open explorer folder.
 
+## Action log
+
+ediater records a durable, append-only log of user/system actions so a
+downstream AI can later reconstruct *what the user did and why*. It follows the
+same posture as the session blob: the **frontend owns the schema**, the **Rust
+backend is a dumb durable sink**.
+
+- **Schema (AI-facing, content-free).** Each entry is one JSON object on its own
+  JSONL line: `v` (schema version), `runId` (one per launch), monotonic `seq`,
+  `ts` (epoch ms), a stable semantic `action` verb, the emitting `source`, an
+  optional `causeId`/`durMs`/`outcome`/`error`, and a compact `payload`. The
+  contract lives in [`src/app/log/schema.ts`](../src/app/log/schema.ts).
+  **Payloads never contain file/buffer contents, queries, or secrets** — only
+  paths and cheap metadata (lengths, line counts, versions). Order events by
+  `(runId, seq)`, never by file boundary (a run can span midnight / rotation).
+- **Surfaces covered.** Workspace mutations (every reducer `SessionAction`, via a
+  `loggedDispatch` wrapper — not the reducer, so it stays pure and fires once
+  under StrictMode), command executions (palette + keybinding), document ops
+  (open/edit/save/close), backend IO calls (`io.*` spans with duration +
+  outcome), `fs-changed` events, and `run.start`/`run.end` lifecycle. A
+  command's `seq` becomes the `causeId` of the dispatches/IO it triggers in the
+  same synchronous tick.
+- **No spam, never blocks.** Editor edits are coalesced per file into one
+  `doc.edit` burst summary; resize/active-tab churn is collapsed last-wins.
+  Events are batched in a bounded ring buffer and flushed (size/time/`flushNow`)
+  like the session persister. Every logging path is wrapped so a fault can never
+  throw into or block the app, and the whole subsystem no-ops when disabled
+  (`VITE_EDIATER_LOG=off`).
+- **Storage.** The backend ([`action_log.rs`](../src-tauri/src/action_log.rs))
+  appends pre-serialized lines to `<app_config_dir>/logs/actions-YYYYMMDD.jsonl`
+  (next to `session.json`; macOS:
+  `~/Library/Application Support/dev.ediater.app/logs/`). Files roll past 16 MiB
+  to `actions-YYYYMMDD.N.jsonl`, and files older than 14 days are swept on
+  startup. Paths are recorded in full by default (local-only IDE) with the home
+  dir collapsed to `~`; `pathScope` can narrow this to relative/basename.
+
 ## IPC surface
 
 **Commands** (frontend → Rust): `ping`, `load_session`, `save_session`,
-`list_directory`, `read_file`, `write_file`, `watch_paths`.
+`list_directory`, `read_file`, `write_file`, `watch_paths`,
+`append_action_log`.
 
 **Events** (Rust → frontend): `fs-changed` — a debounced set of changed paths;
 the explorer refreshes any loaded directory whose contents changed.

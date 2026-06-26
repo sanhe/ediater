@@ -13,4 +13,6 @@ pub struct AppState {
     pub watcher: Mutex<Option<ProjectWatcher>>,
     /// Live terminal sessions, keyed by pty id.
     pub ptys: Mutex<HashMap<String, PtySession>>,
+    /// Serializes action-log appends so concurrent batches never interleave.
+    pub log_lock: Mutex<()>,
 }

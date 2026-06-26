@@ -9,6 +9,7 @@ import {
   SYSTEM_THEME,
 } from "../app/theme/themes";
 import { findGroupById } from "../layout/layout";
+import { log } from "../app/log/actionLog";
 import type { Command } from "./types";
 
 /**
@@ -42,7 +43,7 @@ export function useCommands(): Command[] {
           ? fallbackEditor.path
           : null;
 
-    return [
+    const commands: Command[] = [
       {
         id: "workbench.openFolder",
         title: "Open Folder…",
@@ -133,5 +134,9 @@ export function useCommands(): Command[] {
           }),
         ),
     ];
+
+    // Wrap every command so palette and keybinding executions both record a
+    // `command.run` event whose seq becomes the cause of the dispatches it fires.
+    return commands.map((c) => ({ ...c, run: () => log.command(c, c.run) }));
   }, [session, dispatch, openFolder, docs, resolvedTheme, themes, workshop]);
 }

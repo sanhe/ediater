@@ -1,9 +1,16 @@
 import { invoke, Channel } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { log } from "../log/actionLog";
+import { countLines } from "../log/mapping";
 
 /**
  * Typed wrappers around Tauri backend commands. One function per command keeps
  * the invoke() string keys and argument shapes in a single place.
+ *
+ * Every data command is routed through `log.ioSpan` so each backend call is
+ * recorded as a timed, content-free `io.*` span in the action log. `ping` and
+ * the action-log sink itself stay on raw `invoke` (the latter to avoid logging
+ * the log).
  */
 
 /** Health check — returns a backend version string. */
@@ -13,12 +20,20 @@ export function ping(): Promise<string> {
 
 /** Load the persisted session blob, or null if none has been saved yet. */
 export function loadSession(): Promise<unknown> {
-  return invoke<unknown>("load_session");
+  return log.ioSpan(
+    "load_session",
+    () => invoke<unknown>("load_session"),
+    () => ({}),
+  );
 }
 
 /** Persist the session blob (atomic write on the backend). */
 export function saveSession(data: unknown): Promise<void> {
-  return invoke<void>("save_session", { data });
+  return log.ioSpan(
+    "save_session",
+    () => invoke<void>("save_session", { data }),
+    () => ({}),
+  );
 }
 
 /** A single directory entry, mirroring the Rust `FileEntry`. */
@@ -37,12 +52,20 @@ export function listDirectory(
   path: string,
   showHidden: boolean,
 ): Promise<FileEntry[]> {
-  return invoke<FileEntry[]>("list_directory", { path, showHidden });
+  return log.ioSpan(
+    "list_directory",
+    () => invoke<FileEntry[]>("list_directory", { path, showHidden }),
+    (entries) => ({ path, showHidden, resultCount: entries.length }),
+  );
 }
 
 /** Start (or replace) recursive watchers for the given set of folders. */
 export function watchPaths(paths: string[]): Promise<void> {
-  return invoke<void>("watch_paths", { paths });
+  return log.ioSpan(
+    "watch_paths",
+    () => invoke<void>("watch_paths", { paths }),
+    () => ({ pathsCount: paths.length }),
+  );
 }
 
 export interface FileContent {
@@ -54,12 +77,25 @@ export interface FileContent {
 
 /** Read a UTF-8 text file for the editor. */
 export function readFile(path: string): Promise<FileContent> {
-  return invoke<FileContent>("read_file", { path });
+  return log.ioSpan(
+    "read_file",
+    () => invoke<FileContent>("read_file", { path }),
+    (file) => ({
+      path,
+      resultBytes: file.content.length,
+      resultLines: countLines(file.content),
+      version: file.version,
+    }),
+  );
 }
 
 /** Write content to a file; resolves to the new version (mtime in ms). */
 export function writeFile(path: string, content: string): Promise<number> {
-  return invoke<number>("write_file", { path, content });
+  return log.ioSpan(
+    "write_file",
+    () => invoke<number>("write_file", { path, content }),
+    (version) => ({ path, contentBytes: content.length, version }),
+  );
 }
 
 export interface PtySpawnOptions {
