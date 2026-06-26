@@ -196,6 +196,18 @@ export function pluginsReload(): Promise<PluginDescriptor[]> {
   return invoke<PluginDescriptor[]>("plugins_reload");
 }
 
+export interface GrammarContribution {
+  scopeName: string;
+  languageId: string;
+  extensions: string[];
+  grammar: unknown;
+}
+
+/** List plugin grammar contributions (with their loaded TextMate JSON). */
+export function pluginsGetGrammars(): Promise<GrammarContribution[]> {
+  return invoke<GrammarContribution[]>("plugins_get_grammars");
+}
+
 /** Format a document via a formatter plugin; resolves to the formatted text. */
 export function formatDocument(
   path: string,

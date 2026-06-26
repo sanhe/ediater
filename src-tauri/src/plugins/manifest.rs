@@ -16,7 +16,10 @@ pub struct Manifest {
     #[serde(default)]
     #[allow(dead_code)]
     pub engine: Engine,
-    pub entry: Entry,
+    /// How to launch the process. Absent for grammar-only plugins (which never
+    /// spawn a process — the host just reads their grammar files).
+    #[serde(default)]
+    pub entry: Option<Entry>,
     #[serde(default)]
     pub capabilities: Capabilities,
 }
@@ -59,11 +62,27 @@ pub struct Capabilities {
     #[serde(default)]
     pub formatters: Vec<Formatter>,
     #[serde(default)]
+    pub grammars: Vec<Grammar>,
+    #[serde(default)]
     pub commands: Vec<CommandContribution>,
     #[serde(default)]
     pub ai_actions: Vec<AiAction>,
     #[serde(default)]
     pub activation_events: Vec<String>,
+}
+
+/// A static TextMate grammar contribution (syntax highlighting). The host reads
+/// the grammar file and hands it to the frontend highlighter — no process is
+/// spawned for highlighting.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Grammar {
+    pub scope_name: String,
+    pub language_id: String,
+    #[serde(default)]
+    pub extensions: Vec<String>,
+    /// Path to the `*.tmLanguage.json` file, relative to the plugin dir.
+    pub path: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -142,7 +161,8 @@ mod tests {
         "#;
         let m: Manifest = toml::from_str(toml).expect("parse");
         assert_eq!(m.plugin.id, "ediater.json-formatter");
-        assert_eq!(m.entry.command.as_ref().unwrap().program, "node");
+        let command = m.entry.as_ref().and_then(|e| e.command.as_ref()).unwrap();
+        assert_eq!(command.program, "node");
         assert!(m.formats_language("json"));
         assert!(!m.formats_language("php"));
         assert_eq!(m.capabilities.activation_events, vec!["onLanguage:json"]);

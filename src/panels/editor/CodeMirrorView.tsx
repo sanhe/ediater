@@ -4,7 +4,9 @@ import { EditorView, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { resolveLanguage } from "./cm/languages";
+import { textmateHighlighter } from "./cm/textmate";
 import { onReveal, onSetText } from "./reveal";
+import { grammarLanguageForPath } from "../../plugins/grammars";
 import type { ThemeKind } from "../../app/theme/themes";
 
 interface CodeMirrorViewProps {
@@ -63,6 +65,9 @@ export function CodeMirrorView({
   const viewRef = useRef<EditorView | null>(null);
   const themeCompartment = useRef(new Compartment());
   const languageCompartment = useRef(new Compartment());
+  const textmateCompartment = useRef(new Compartment());
+  // A plugin-contributed TextMate grammar for this file, if any.
+  const tmLang = useRef<string | null>(grammarLanguageForPath(path));
 
   // Keep latest callbacks in refs so the view (built once) never goes stale.
   const onChangeRef = useRef(onChange);
@@ -80,6 +85,9 @@ export function CodeMirrorView({
         basicSetup,
         themeCompartment.current.of(syntaxFor(kind)),
         languageCompartment.current.of([]),
+        textmateCompartment.current.of(
+          tmLang.current ? textmateHighlighter(tmLang.current) : [],
+        ),
         EditorState.readOnly.of(readonly),
         Prec.highest(
           keymap.of([
@@ -104,14 +112,18 @@ export function CodeMirrorView({
     const view = new EditorView({ state, parent: host });
     viewRef.current = view;
 
+    // Plugin grammars provide highlighting; otherwise use CodeMirror's own
+    // language for both editing behavior and highlighting.
     let cancelled = false;
-    void resolveLanguage(path).then((support) => {
-      if (!cancelled && support && viewRef.current) {
-        viewRef.current.dispatch({
-          effects: languageCompartment.current.reconfigure(support),
-        });
-      }
-    });
+    if (!tmLang.current) {
+      void resolveLanguage(path).then((support) => {
+        if (!cancelled && support && viewRef.current) {
+          viewRef.current.dispatch({
+            effects: languageCompartment.current.reconfigure(support),
+          });
+        }
+      });
+    }
 
     return () => {
       cancelled = true;
@@ -122,9 +134,19 @@ export function CodeMirrorView({
   }, []);
 
   useEffect(() => {
-    viewRef.current?.dispatch({
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({
       effects: themeCompartment.current.reconfigure(syntaxFor(kind)),
     });
+    // Rebuild TextMate decorations with the new theme's colors.
+    if (tmLang.current) {
+      view.dispatch({
+        effects: textmateCompartment.current.reconfigure(
+          textmateHighlighter(tmLang.current),
+        ),
+      });
+    }
   }, [kind]);
 
   // Reveal a line on request (e.g. clicking a search result).

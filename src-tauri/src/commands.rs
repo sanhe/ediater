@@ -12,7 +12,7 @@ use crate::action_log;
 use crate::fs::io::{self, FileContent};
 use crate::fs::listing::{self, FileEntry};
 use crate::fs::watch;
-use crate::plugins::host::PluginDescriptor;
+use crate::plugins::host::{GrammarContribution, PluginDescriptor};
 use crate::pty::session as pty;
 use crate::search::{files as search_files_mod, text as search_text_mod};
 use crate::session;
@@ -235,6 +235,21 @@ pub fn plugins_reload(
         .map_err(|e| format!("plugin host lock poisoned: {e}"))?;
     host.discover(&dirs);
     Ok(host.list())
+}
+
+/// List grammar contributions (with their loaded TextMate JSON).
+#[tauri::command]
+pub fn plugins_get_grammars(
+    app: AppHandle,
+    state: State<AppState>,
+) -> Result<Vec<GrammarContribution>, String> {
+    let dirs = plugin_dirs(&app);
+    let mut host = state
+        .plugin_host
+        .lock()
+        .map_err(|e| format!("plugin host lock poisoned: {e}"))?;
+    host.ensure_discovered(&dirs);
+    Ok(host.grammars())
 }
 
 /// Format a document via a formatter plugin for `language_id`. Returns the

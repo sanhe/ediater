@@ -38,6 +38,7 @@ pub fn run() {
             commands::search_files,
             commands::plugins_list,
             commands::plugins_reload,
+            commands::plugins_get_grammars,
             commands::format_document,
             commands::ai_action,
             commands::ai_cancel,

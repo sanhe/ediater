@@ -1,0 +1,21 @@
+[plugin]
+id = "ediater.ini-grammar"
+name = "INI Language"
+version = "0.1.0"
+description = "Syntax highlighting for .ini / .conf / .cfg files."
+
+[engine]
+ediater = ">=0.0.0"
+protocol = "1.0"
+
+# Grammar-only plugin: no [entry] — the host never spawns a process, it just
+# reads the grammar file and hands it to the editor highlighter.
+
+[capabilities]
+activationEvents = []
+
+[[capabilities.grammars]]
+scopeName = "source.ini"
+languageId = "ini"
+extensions = [".ini", ".conf", ".cfg"]
+path = "ini.tmLanguage.json"

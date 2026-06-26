@@ -1,0 +1,22 @@
+{
+  "scopeName": "source.ini",
+  "name": "ini",
+  "patterns": [
+    {
+      "name": "comment.line.ini",
+      "match": "^\\s*[;#].*$"
+    },
+    {
+      "name": "entity.name.section.ini",
+      "match": "^\\s*(\\[)([^\\]]*)(\\])"
+    },
+    {
+      "match": "^\\s*([^=;#\\s][^=]*?)\\s*(=)\\s*(.*)$",
+      "captures": {
+        "1": { "name": "keyword.other.definition.ini" },
+        "2": { "name": "punctuation.separator.key-value.ini" },
+        "3": { "name": "string.unquoted.ini" }
+      }
+    }
+  ]
+}

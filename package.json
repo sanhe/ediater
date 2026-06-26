@@ -27,7 +27,8 @@
     "codemirror": "^6.0.2",
     "react": "^19.0.0",
     "react-arborist": "^3.10.5",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "shiki": "^4.3.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.1.0",

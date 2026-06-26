@@ -21,6 +21,7 @@ import { ThemeController } from "./theme/ThemeContext";
 import { ThemeWorkshopProvider } from "./theme/ThemeWorkshop";
 import { DocumentsProvider } from "../panels/editor/documents";
 import { requestReveal } from "../panels/editor/reveal";
+import { loadPluginGrammars } from "../plugins/grammars";
 import { CommandsLayer } from "../commands/CommandsLayer";
 import { AppShell } from "../components/AppShell";
 
@@ -140,6 +141,11 @@ export function App() {
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
+  // Register plugin-contributed grammars with the editor highlighter.
+  useEffect(() => {
+    void loadPluginGrammars();
   }, []);
 
   const openFolder = useCallback(async () => {

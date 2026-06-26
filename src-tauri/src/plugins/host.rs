@@ -42,6 +42,16 @@ pub struct PluginDescriptor {
     pub ai_actions: Vec<AiAction>,
 }
 
+/// A grammar plus its loaded TextMate JSON, for the frontend highlighter.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GrammarContribution {
+    pub scope_name: String,
+    pub language_id: String,
+    pub extensions: Vec<String>,
+    pub grammar: Value,
+}
+
 /// Forward an `ai/stream` notification to the frontend channel for its request.
 fn route_ai_stream(streams: &AiStreams, value: Value) {
     if value.get("method").and_then(|m| m.as_str()) != Some("ai/stream") {
@@ -120,6 +130,28 @@ impl PluginHost {
             .collect()
     }
 
+    /// Collect all grammar contributions, loading each grammar's JSON from disk.
+    pub fn grammars(&self) -> Vec<GrammarContribution> {
+        let mut out = Vec::new();
+        for plugin in &self.discovered {
+            for g in &plugin.manifest.capabilities.grammars {
+                let file = plugin.dir.join(&g.path);
+                let json = std::fs::read_to_string(&file)
+                    .ok()
+                    .and_then(|text| serde_json::from_str::<Value>(&text).ok());
+                if let Some(grammar) = json {
+                    out.push(GrammarContribution {
+                        scope_name: g.scope_name.clone(),
+                        language_id: g.language_id.clone(),
+                        extensions: g.extensions.clone(),
+                        grammar,
+                    });
+                }
+            }
+        }
+        out
+    }
+
     fn ensure_connection(&mut self, plugin_id: &str) -> Result<(), String> {
         if self.connections.contains_key(plugin_id) {
             return Ok(());
@@ -132,8 +164,8 @@ impl PluginHost {
         let command = plugin
             .manifest
             .entry
-            .command
             .as_ref()
+            .and_then(|e| e.command.as_ref())
             .ok_or_else(|| format!("plugin {plugin_id} has no [entry.command]"))?;
 
         let conn = Connection::spawn(&command.program, &command.args, &plugin.dir)?;
