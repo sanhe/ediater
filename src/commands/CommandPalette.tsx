@@ -8,6 +8,7 @@ import {
 import type { Command } from "./types";
 import { fuzzyFilter } from "./fuzzy";
 import { prettyKey } from "./keybindings";
+import { log } from "../app/log/actionLog";
 import "./commands.css";
 
 interface CommandPaletteProps {
@@ -46,6 +47,7 @@ export function CommandPalette({ commands, onClose }: CommandPaletteProps) {
   const run = (cmd: Command | undefined) => {
     if (!cmd) return;
     onClose();
+    log.setNextCommandSource("palette");
     cmd.run();
   };
 

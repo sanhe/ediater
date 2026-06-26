@@ -9,4 +9,6 @@ pub struct AppState {
     /// The active project's recursive file watcher, if any. Replacing it (or
     /// dropping AppState) stops watching.
     pub watcher: Mutex<Option<ProjectWatcher>>,
+    /// Serializes action-log appends so concurrent batches never interleave.
+    pub log_lock: Mutex<()>,
 }

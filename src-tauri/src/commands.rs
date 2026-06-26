@@ -4,6 +4,7 @@
 use serde_json::Value;
 use tauri::{AppHandle, State};
 
+use crate::action_log;
 use crate::fs::io::{self, FileContent};
 use crate::fs::listing::{self, FileEntry};
 use crate::fs::watch;
@@ -60,4 +61,20 @@ pub fn watch_paths(
         .lock()
         .map_err(|e| format!("watcher lock poisoned: {e}"))? = Some(watcher);
     Ok(())
+}
+
+/// Append a batch of pre-serialized JSONL action-log lines to durable storage.
+/// Best-effort: the frontend ignores the result so logging never breaks the app.
+#[tauri::command]
+pub fn append_action_log(
+    app: AppHandle,
+    state: State<AppState>,
+    lines: Vec<String>,
+) -> Result<(), String> {
+    let _guard = state
+        .log_lock
+        .lock()
+        .map_err(|e| format!("log lock poisoned: {e}"))?;
+    let dir = action_log::logs_dir(&app)?;
+    action_log::append_to_dir(&dir, &lines)
 }
