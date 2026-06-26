@@ -136,7 +136,8 @@ body.layout-dragging {
   overflow: auto;
 }
 
-.panel-placeholder {
+.panel-placeholder,
+.panel-loading {
   height: 100%;
   display: flex;
   flex-direction: column;

@@ -6,6 +6,7 @@ import { useThemeWorkshop } from "../app/theme/ThemeWorkshop";
 import { DockLayout } from "../layout/DockLayout";
 import { findGroupById } from "../layout/layout";
 import { panelTitle, type PanelState } from "../layout/panel";
+import { clearPanelState } from "../panels/panelState";
 
 interface AppShellProps {
   backendStatus: string;
@@ -133,6 +134,7 @@ export function AppShell({ backendStatus }: AppShellProps) {
               const panel = session.panels[panelId];
               dispatch({ type: "closePanel", panelId });
               if (panel?.kind === "editor") docs.close(panel.path);
+              clearPanelState(panelId);
             }}
             onFocusGroup={(groupId) =>
               dispatch({ type: "setActiveGroup", groupId })

@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
 import { Channel } from "@tauri-apps/api/core";
+import type { PanelBodyProps } from "../../layout/panelRegistry";
+import { usePanelState } from "../panelState";
 import {
   aiAction,
   aiCancel,
@@ -23,9 +25,12 @@ function appendToLast(messages: Message[], delta: string): Message[] {
  * (an out-of-core process) handles the actual model call; this panel just sends
  * the prompt and renders the stream.
  */
-export function AiPanel() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
+export function AiPanel({ panel }: PanelBodyProps) {
+  const [messages, setMessages] = usePanelState<Message[]>(
+    `${panel.id}:messages`,
+    [],
+  );
+  const [input, setInput] = usePanelState(`${panel.id}:input`, "");
   const [running, setRunning] = useState(false);
   const requestIdRef = useRef<string | null>(null);
 

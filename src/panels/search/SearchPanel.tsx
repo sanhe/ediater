@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Channel } from "@tauri-apps/api/core";
+import type { PanelBodyProps } from "../../layout/panelRegistry";
+import { usePanelState } from "../panelState";
 import { useWorkspace } from "../../app/workspace";
 import {
   cancelSearch,
@@ -48,12 +50,15 @@ function relPath(file: string, root: string | null): string {
  * "Files" (fuzzy filename). Results jump to the file (and line) in the editor.
  * Searches the first open folder.
  */
-export function SearchPanel() {
+export function SearchPanel({ panel }: PanelBodyProps) {
   const { session, openFile } = useWorkspace();
-  const [mode, setMode] = useState<Mode>("text");
-  const [query, setQuery] = useState("");
-  const [caseSensitive, setCaseSensitive] = useState(false);
-  const [regex, setRegex] = useState(false);
+  const [mode, setMode] = usePanelState<Mode>(`${panel.id}:mode`, "text");
+  const [query, setQuery] = usePanelState(`${panel.id}:query`, "");
+  const [caseSensitive, setCaseSensitive] = usePanelState(
+    `${panel.id}:case`,
+    false,
+  );
+  const [regex, setRegex] = usePanelState(`${panel.id}:regex`, false);
   const [groups, setGroups] = useState<{ file: string; items: TextMatch[] }[]>(
     [],
   );

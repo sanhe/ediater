@@ -1,5 +1,6 @@
 import {
   Fragment,
+  Suspense,
   useRef,
   useState,
   type CSSProperties,
@@ -200,7 +201,13 @@ function GroupView({
         })}
       </div>
       <div className="dock-group-body" data-groupbody={group.id}>
-        {activePanel && Body ? <Body panel={activePanel} /> : null}
+        {activePanel && Body ? (
+          <Suspense
+            fallback={<div className="panel-loading muted">Loading…</div>}
+          >
+            <Body panel={activePanel} />
+          </Suspense>
+        ) : null}
       </div>
     </div>
   );
